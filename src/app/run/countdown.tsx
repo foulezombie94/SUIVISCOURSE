@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
-import { Animated, AppState, Easing, Pressable, View } from 'react-native';
+import { Animated, AppState, Easing, View } from 'react-native';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -65,32 +65,14 @@ export default function RunCountdown() {
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1.1] });
   const opacity = pulse.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 1, 1] });
   return <SafeAreaView style={{ flex: 1, backgroundColor: ink }} edges={['top', 'bottom']}>
-    <StatusBar style="light" />
-    <View style={{ paddingHorizontal: 28, paddingTop: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Text style={{ color: paper, fontSize: 13, fontWeight: '900', letterSpacing: 2 }}>ÉLAN / DÉPART</Text>
-      <Pressable accessibilityRole="button" disabled={count === 0} onPress={() => {
-        cancelled.current = true;
-        router.replace('/(tabs)/run');
-      }}>
-        <Text style={{ color: paper, fontWeight: '800', fontSize: 12 }}>ANNULER</Text>
-      </Pressable>
-    </View>
+    <StatusBar hidden />
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={{ width: 270, height: 270, borderRadius: 135,
-        borderWidth: 2, borderColor: paper, alignItems: 'center', justifyContent: 'center',
-        opacity, transform: [{ scale }] }}>
-        <View style={{ width: 224, height: 224, borderRadius: 112, backgroundColor: paper,
-          alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: ink, fontSize: count ? 150 : 75, fontFamily: fonts.monoBold,
-            letterSpacing: -8, includeFontPadding: false }}>{count || 'GO!'}</Text>
-        </View>
+      <Animated.View style={{ opacity, transform: [{ scale }] }}>
+        <Text style={{ color: paper, fontSize: 190, fontFamily: fonts.monoBold,
+          letterSpacing: -12, includeFontPadding: false }}>
+          {count > 0 ? count : ''}
+        </Text>
       </Animated.View>
-      <Text style={{ color: paper, marginTop: 72, fontSize: 14, fontWeight: '800', letterSpacing: 2 }}>
-        {count ? 'PRÉPARE-TOI À BOUGER' : 'DÉMARRAGE DU GPS…'}
-      </Text>
     </View>
-    <Text style={{ color: paper, textAlign: 'center', paddingBottom: 30, fontSize: 12 }}>
-      Le chrono démarre après le décompte.
-    </Text>
   </SafeAreaView>;
 }
