@@ -23,33 +23,28 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function MusicCard() {
-  return <View accessibilityLabel="Carte musique" style={{
-    alignSelf: 'stretch', minHeight: 76, borderRadius: 20, backgroundColor: '#181818',
-    borderWidth: 1, borderColor: '#343434', paddingHorizontal: 12, paddingVertical: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 11,
+  return <View accessibilityLabel="Lecteur musique, prochain morceau Side Bend" style={{
+    alignSelf: 'stretch', height: 64, borderRadius: 20, backgroundColor: '#161616',
+    borderWidth: 2, borderColor: '#E3433B', padding: 5,
   }}>
-    <View style={{ width: 48, height: 48, borderRadius: 13, backgroundColor: '#FFFFFF',
-      alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: ink, fontSize: 25, fontWeight: '900' }}>♫</Text>
-    </View>
-    <View style={{ flex: 1, gap: 4 }}>
-      <Text style={{ color: '#BDBDBD', fontSize: 8, fontWeight: '900', letterSpacing: 1.1 }}>
-        MUSIQUE
-      </Text>
-      <Text numberOfLines={1} style={{ color: paper, fontSize: 13, fontWeight: '800' }}>
-        Choisis ta playlist
-      </Text>
-      <Text numberOfLines={1} style={{ color: '#BDBDBD', fontSize: 9 }}>
-        Garde ton rythme pendant la course
-      </Text>
-    </View>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Text style={{ color: '#777777', fontSize: 17, fontWeight: '900' }}>‹</Text>
-      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: paper,
-        alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: ink, fontSize: 13, fontWeight: '900', marginLeft: 2 }}>▶</Text>
+    <View style={{ flex: 1, borderRadius: 14, backgroundColor: '#252525',
+      paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: '#D8D8D8',
+        alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <Text style={{ color: ink, fontSize: 22 }}>🏃🏻</Text>
       </View>
-      <Text style={{ color: '#777777', fontSize: 17, fontWeight: '900' }}>›</Text>
+      <View style={{ flex: 1, justifyContent: 'center', gap: 2 }}>
+        <Text style={{ color: '#C8C8C8', fontSize: 8, fontWeight: '700' }}>Next</Text>
+        <Text numberOfLines={1} style={{ color: paper, fontSize: 10, fontWeight: '800' }}>
+          Side Bend
+        </Text>
+      </View>
+      <View style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 1,
+        borderColor: '#BDBDBD', flexDirection: 'row', alignItems: 'center',
+        justifyContent: 'center', gap: 1 }}>
+        <Text style={{ color: paper, fontSize: 11, lineHeight: 14 }}>▶</Text>
+        <View style={{ width: 2, height: 10, borderRadius: 1, backgroundColor: paper }} />
+      </View>
     </View>
   </View>;
 }
