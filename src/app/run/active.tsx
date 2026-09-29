@@ -15,6 +15,13 @@ const paper = '#FFFFFF';
 const accent = '#FF493D';
 const ringTrack = '#3B3B3B';
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return <View style={{ gap: 3 }}>
+    <Text style={{ color: '#BDBDBD', fontSize: 9, fontWeight: '800', letterSpacing: 0.7 }}>{label}</Text>
+    <Text style={{ color: paper, fontSize: 13, fontFamily: fonts.monoBold }}>{value}</Text>
+  </View>;
+}
+
 export default function ActiveRun() {
   const { width, height } = useWindowDimensions();
   const [mapRefresh, setMapRefresh] = useState(0);
@@ -54,11 +61,15 @@ export default function ActiveRun() {
     </View>
 
     <View style={{ flex: 1, backgroundColor: ink, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-      marginTop: -18, alignItems: 'center', paddingHorizontal: 24, paddingTop: 14,
-      paddingBottom: 12, gap: 8 }}>
-      <Text style={{ color: paper, fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>
-        {active.state === 'autoPaused' ? 'PAUSE AUTO' : active.state === 'paused' ? 'EN PAUSE' : 'TEMPS ÉCOULÉ'}
-      </Text>
+      marginTop: -18, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 12, gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Stat label="DISTANCE" value={active.distanceMeters < 1000
+          ? `${Math.round(active.distanceMeters)} M` : `${formatKm(active.distanceMeters)} KM`} />
+        <Text style={{ color: paper, fontSize: 11, fontWeight: '900', letterSpacing: 1.3 }}>
+          {active.state === 'autoPaused' ? 'PAUSE AUTO' : active.state === 'paused' ? 'EN PAUSE' : 'COURSE'}
+        </Text>
+        <Stat label="ALLURE / KM" value={formatPace(pace)} />
+      </View>
       <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
         <Svg width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}
           style={{ position: 'absolute' }}>
@@ -72,49 +83,32 @@ export default function ActiveRun() {
             {formatDuration(active.elapsedSeconds)}
           </Text>
           <Text style={{ color: paper, fontSize: 10, fontWeight: '900', letterSpacing: 1.8 }}>TEMPS</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, marginTop: 8 }}>
-            <Text style={{ color: paper, fontSize: 23, fontFamily: fonts.monoBold }}>
-              {active.distanceMeters < 1000
-                ? `${Math.round(active.distanceMeters)}` : formatKm(active.distanceMeters)}
+          <Pressable accessibilityRole="button"
+            accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
+            disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
+            style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22,
+              backgroundColor: '#242424', borderWidth: 1, borderColor: '#585858',
+              alignItems: 'center', justifyContent: 'center', marginTop: 10,
+              transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
+            <Text style={{ color: paper, fontSize: 17, fontWeight: '900' }}>
+              {active.state === 'running' ? 'Ⅱ' : '▶'}
             </Text>
-            <Text style={{ color: paper, fontSize: 10, fontWeight: '900' }}>
-              {active.distanceMeters < 1000 ? 'M' : 'KM'}
-            </Text>
-          </View>
-          <Text style={{ color: paper, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 }}>DISTANCE</Text>
+          </Pressable>
         </View>
       </View>
 
-      <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
-        <Pressable accessibilityRole="button"
-          accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
-          disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
-          style={({ pressed }) => ({ width: 54, height: 54, borderRadius: 27,
-            backgroundColor: '#242424', borderWidth: 1, borderColor: '#585858',
-            alignItems: 'center', justifyContent: 'center',
-            transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
-          <Text style={{ color: paper, fontSize: 19, fontWeight: '900' }}>
-            {active.state === 'running' ? 'Ⅱ' : '▶'}
-          </Text>
-        </Pressable>
-        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-around', gap: 8 }}>
-          <View style={{ gap: 4, alignItems: 'center' }}>
-            <Text style={{ color: paper, fontSize: 10, fontWeight: '800' }}>ALLURE</Text>
-            <Text style={{ color: paper, fontSize: 15, fontFamily: fonts.monoBold }}>{formatPace(pace)}</Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: ringTrack }} />
-          <View style={{ gap: 4, alignItems: 'center' }}>
-            <Text style={{ color: paper, fontSize: 10, fontWeight: '800' }}>VITESSE</Text>
-            <Text style={{ color: paper, fontSize: 15, fontFamily: fonts.monoBold }}>{speed.toFixed(1)} KM/H</Text>
-          </View>
-        </View>
+      <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Stat label="VITESSE" value={`${speed.toFixed(1)} KM/H`} />
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
-          style={({ pressed }) => ({ width: 54, height: 54, borderRadius: 16,
+          style={({ pressed }) => ({ width: 56, height: 56, borderRadius: 15,
             backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
           <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
         </Pressable>
+      </View>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: ringTrack, overflow: 'hidden' }}>
+        <View style={{ width: `${lapProgress * 100}%`, height: 4, backgroundColor: accent }} />
       </View>
       {error ? <Text style={{ alignSelf: 'stretch', color: paper, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
     </View>
