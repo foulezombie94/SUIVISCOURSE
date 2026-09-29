@@ -3,9 +3,10 @@ import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
+import * as Linking from 'expo-linking';
 import MapView from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, Switch, View } from 'react-native';
 import { Text } from '@/components/typography';
 import { Field, Page } from '@/components/ui';
 import { palette } from '@/constants/palette';
@@ -27,6 +28,7 @@ export default function Run() {
   const [goalSaved, setGoalSaved] = useState<RunGoal | null>(null);
   const [goalSavedForUser, setGoalSavedForUser] = useState('');
   const [savingGoal, setSavingGoal] = useState(false);
+  const [musicPickerVisible, setMusicPickerVisible] = useState(false);
   const { active, busy, error } = useRunStore();
   useEffect(() => {
     if (!session?.user.id) return;
@@ -109,6 +111,14 @@ export default function Run() {
       setGoalMessage('Enregistrement impossible. Réessaie.');
     } finally { setSavingGoal(false); }
   }
+  async function openMusicService(url: string) {
+    setMusicPickerVisible(false);
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Application indisponible', 'Impossible d’ouvrir ce service musical sur cet appareil.');
+    }
+  }
   return <Page scroll={false}>
     <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 18, gap: 18 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -121,7 +131,8 @@ export default function Run() {
             borderColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center',
             backgroundColor: 'rgba(255,255,255,0.08)' }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Musique"
-            hitSlop={8} style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
+            hitSlop={8} onPress={() => setMusicPickerVisible(true)}
+            style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
             <MaterialCommunityIcons name="music-note" size={21} color={palette.text} />
           </Pressable>
         </GlassView>
@@ -185,6 +196,48 @@ export default function Run() {
         </Pressable>
       </View>
     </View>
+    <Modal visible={musicPickerVisible} transparent animationType="fade" statusBarTranslucent
+      onRequestClose={() => setMusicPickerVisible(false)}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center',
+        paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.78)' }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Fermer le choix musical"
+          onPress={() => setMusicPickerVisible(false)}
+          style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} />
+        <View style={{ width: '100%', maxWidth: 380, backgroundColor: '#FFFFFF',
+          borderRadius: 28, borderWidth: 1, borderColor: '#000000', padding: 22, gap: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, gap: 5 }}>
+              <Text style={{ color: '#000000', fontSize: 10, fontWeight: '900', letterSpacing: 2 }}>LECTEUR MUSICAL</Text>
+              <Text style={{ color: '#000000', fontSize: 23, fontWeight: '900' }}>Tu écoutes où ?</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Fermer"
+              onPress={() => setMusicPickerVisible(false)}
+              style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#000000',
+                alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="close" size={19} color="#FFFFFF" />
+            </Pressable>
+          </View>
+          <Pressable accessibilityRole="button" onPress={() => void openMusicService('https://music.apple.com/')}
+            style={({ pressed }) => ({ minHeight: 60, borderRadius: 18, borderWidth: 1,
+              borderColor: '#000000', backgroundColor: '#FFFFFF', paddingHorizontal: 16,
+              flexDirection: 'row', alignItems: 'center', gap: 14,
+              transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+            <MaterialCommunityIcons name="apple" size={24} color="#000000" />
+            <Text style={{ color: '#000000', fontSize: 15, fontWeight: '900' }}>Apple Music</Text>
+            <MaterialCommunityIcons name="arrow-top-right" size={17} color="#000000" style={{ marginLeft: 'auto' }} />
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => void openMusicService('https://open.spotify.com/')}
+            style={({ pressed }) => ({ minHeight: 60, borderRadius: 18, borderWidth: 1,
+              borderColor: '#000000', backgroundColor: '#000000', paddingHorizontal: 16,
+              flexDirection: 'row', alignItems: 'center', gap: 14,
+              transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+            <MaterialCommunityIcons name="spotify" size={24} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '900' }}>Spotify</Text>
+            <MaterialCommunityIcons name="arrow-top-right" size={17} color="#FFFFFF" style={{ marginLeft: 'auto' }} />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
     <Modal visible={goalModalVisible} transparent animationType="slide" statusBarTranslucent
       onRequestClose={() => setGoalModalVisible(false)}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.65)' }}>
