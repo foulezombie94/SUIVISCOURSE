@@ -119,7 +119,8 @@ export default function Run() {
       {mapCenter ? <MapView style={{ flex: 1 }}
         region={{ ...mapCenter, latitudeDelta: 0.008, longitudeDelta: 0.008 }}
         showsUserLocation={locationAllowed} showsMyLocationButton={false}
-        scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} />
+        scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
+        showsPointsOfInterests={false} />
         : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 35 }}>
           <Text style={{ color: palette.text, fontSize: 42 }}>◎</Text>
           <Text style={{ color: palette.text, textAlign: 'center', fontWeight: '800' }}>
