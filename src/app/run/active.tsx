@@ -14,19 +14,19 @@ const paper = '#FFFFFF';
 const electricBlue = '#00C8FF';
 
 function Metric({ label, value, unit, height }: { label: string; value: string; unit: string; height: number }) {
-  return <View style={{ flex: 1, minWidth: 0, height, borderRadius: 14,
-    paddingVertical: 10, paddingHorizontal: 11, justifyContent: 'space-between', backgroundColor: ink }}>
-    <Text numberOfLines={1} style={{ color: paper, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
+  return <View style={{ flex: 1, minWidth: 0, height, borderRadius: 18,
+    paddingVertical: 13, paddingHorizontal: 13, justifyContent: 'space-between', backgroundColor: ink }}>
+    <Text numberOfLines={1} style={{ color: paper, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
-      style={{ color: paper, fontSize: 23, fontFamily: fonts.monoBold }}>{value}</Text>
-    <Text numberOfLines={1} style={{ color: paper, fontSize: 9, fontWeight: '800' }}>{unit}</Text>
+      style={{ color: paper, fontSize: 25, fontFamily: fonts.monoBold }}>{value}</Text>
+    <Text numberOfLines={1} style={{ color: paper, fontSize: 10, fontWeight: '800' }}>{unit}</Text>
   </View>;
 }
 
 export default function ActiveRun() {
   const { width } = useWindowDimensions();
   const cardWidth = (width - 28 - 9) / 2;
-  const cardHeight = Math.round(Math.min(124, Math.max(82, cardWidth * 0.67)));
+  const cardHeight = Math.round(Math.min(140, Math.max(90, cardWidth * 0.75)));
   const [mapRefresh, setMapRefresh] = useState(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
   useEffect(() => {
@@ -80,9 +80,9 @@ export default function ActiveRun() {
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
           style={({ pressed }) => ({ flex: 1, height: cardHeight,
-            borderRadius: 14, backgroundColor: electricBlue, alignItems: 'center', justifyContent: 'center',
+            borderRadius: 18, backgroundColor: electricBlue, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.98 : 1 }] })}>
-          <Text style={{ color: ink, fontSize: 17, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
+          <Text style={{ color: ink, fontSize: 19, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
         </Pressable>
       </View>
       {error ? <Text style={{ color: paper, backgroundColor: ink, padding: 8,
