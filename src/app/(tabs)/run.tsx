@@ -92,7 +92,7 @@ export default function Run() {
         </View>
       </View>
 
-      <View style={{ position: 'absolute', bottom: 28, left: 0, right: 0,
+      <View style={{ position: 'absolute', bottom: 72, left: 0, right: 0,
         alignItems: 'center', gap: 12 }}>
         <Pressable accessibilityRole="button" accessibilityLabel={active ? 'Voir la course en cours' : 'Démarrer la course'}
           disabled={busy} onPress={() => void beginRun()}
