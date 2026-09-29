@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { GlassView } from 'expo-glass-effect';
 import MapView from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, View } from 'react-native';
@@ -109,9 +111,20 @@ export default function Run() {
   }
   return <Page scroll={false}>
     <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 18, gap: 18 }}>
-      <View style={{ gap: 2 }}>
-        <Text style={{ color: palette.accent, fontSize: 11, fontWeight: '900', letterSpacing: 2.5 }}>ÉLAN / BOUGER</Text>
-        <Text style={{ color: palette.text, fontSize: 37, fontWeight: '900', letterSpacing: -1.5 }}>Run.</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ gap: 2 }}>
+          <Text style={{ color: palette.accent, fontSize: 11, fontWeight: '900', letterSpacing: 2.5 }}>ÉLAN / BOUGER</Text>
+          <Text style={{ color: palette.text, fontSize: 37, fontWeight: '900', letterSpacing: -1.5 }}>Run.</Text>
+        </View>
+        <GlassView isInteractive colorScheme="dark" tintColor="rgba(255,255,255,0.18)"
+          style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.08)' }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Musique"
+            hitSlop={8} style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="music-note" size={21} color={palette.text} />
+          </Pressable>
+        </GlassView>
       </View>
     </View>
 
