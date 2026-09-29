@@ -11,15 +11,21 @@ import { fonts } from '@/constants/typography';
 
 const ink = '#000000';
 const paper = '#FFFFFF';
-const electricBlue = '#00C8FF';
+const charcoal = '#3D414A';
+const distancePaper = '#EEEEEE';
+const stopLime = '#DDE872';
 
-function Metric({ label, value, unit, height }: { label: string; value: string; unit: string; height: number }) {
+function Metric({ label, value, unit, height, tone = 'dark' }: {
+  label: string; value: string; unit: string; height: number; tone?: 'dark' | 'light';
+}) {
+  const backgroundColor = tone === 'dark' ? charcoal : distancePaper;
+  const textColor = tone === 'dark' ? paper : ink;
   return <View style={{ flex: 1, minWidth: 0, height, borderRadius: 18,
-    paddingVertical: 13, paddingHorizontal: 13, justifyContent: 'space-between', backgroundColor: ink }}>
-    <Text numberOfLines={1} style={{ color: paper, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
+    paddingVertical: 13, paddingHorizontal: 13, justifyContent: 'space-between', backgroundColor }}>
+    <Text numberOfLines={1} style={{ color: textColor, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
-      style={{ color: paper, fontSize: 25, fontFamily: fonts.monoBold }}>{value}</Text>
-    <Text numberOfLines={1} style={{ color: paper, fontSize: 10, fontWeight: '800' }}>{unit}</Text>
+      style={{ color: textColor, fontSize: 25, fontFamily: fonts.monoBold }}>{value}</Text>
+    <Text numberOfLines={1} style={{ color: textColor, fontSize: 10, fontWeight: '800' }}>{unit}</Text>
   </View>;
 }
 
@@ -76,11 +82,11 @@ export default function ActiveRun() {
       <View style={{ flexDirection: 'row', gap: 9 }}>
         <Metric label="DISTANCE" value={active.distanceMeters < 1000
           ? `${Math.round(active.distanceMeters)}` : formatKm(active.distanceMeters)}
-          unit={active.distanceMeters < 1000 ? 'M' : 'KM'} height={cardHeight} />
+          unit={active.distanceMeters < 1000 ? 'M' : 'KM'} height={cardHeight} tone="light" />
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
           style={({ pressed }) => ({ flex: 1, height: cardHeight,
-            borderRadius: 18, backgroundColor: electricBlue, alignItems: 'center', justifyContent: 'center',
+            borderRadius: 18, backgroundColor: stopLime, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.98 : 1 }] })}>
           <Text style={{ color: ink, fontSize: 19, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
         </Pressable>
