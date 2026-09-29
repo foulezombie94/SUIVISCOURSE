@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, View, useWindowDimensions } from 'react-native';
-import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,7 +62,7 @@ export default function ActiveRun() {
   const holdProgress = useSharedValue(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
   const stopButtonScale = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + holdProgress.value * 0.4 }],
+    transform: [{ scale: 1 + holdProgress.value * 0.55 }],
   }));
   const completeHold = useCallback(() => {
     if (finishingRef.current) return;
@@ -82,7 +82,9 @@ export default function ActiveRun() {
   const startStopHold = () => {
     if (busy || finishingRef.current) return;
     cancelAnimation(holdProgress);
-    holdProgress.set(withTiming(1, { duration: 3000 }));
+    holdProgress.set(withTiming(1, { duration: 1500 }, (finished) => {
+      if (finished) runOnJS(completeHold)();
+    }));
   };
   const cancelStopHold = () => {
     if (finishingRef.current) return;
@@ -163,8 +165,8 @@ export default function ActiveRun() {
         </Pressable>
         <Animated.View style={[{ position: 'absolute', right: 0, width: 58, height: 58 }, stopButtonScale]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Maintenir pour terminer la course"
-            accessibilityHint="Maintiens le bouton rond trois secondes. Relâcher avant annule."
-            disabled={busy || finishing} delayLongPress={3000} onLongPress={completeHold}
+            accessibilityHint="Maintiens le bouton rond une seconde et demie pour terminer. Relâcher avant annule."
+            disabled={busy || finishing}
             onPressIn={startStopHold} onPressOut={cancelStopHold}
             style={({ pressed }) => ({ width: 58, height: 58, aspectRatio: 1, borderRadius: 29,
               backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
