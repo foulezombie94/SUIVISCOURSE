@@ -2,20 +2,52 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import MapView from 'react-native-maps';
-import { Pressable, Switch, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, View } from 'react-native';
 import { Text } from '@/components/typography';
-import { Page } from '@/components/ui';
+import { Field, Page } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useRunStore } from '@/store/run-store';
 type MapCenter = { latitude: number; longitude: number };
+type RunGoal = { distanceKm: string; targetTime: string };
+const goalStorageKey = (userId: string) => `run-goal:${userId}`;
 export default function Run() {
   const { session } = useAuth();
   const [autoPause, setAutoPause] = useState(true);
   const [gps, setGps] = useState('Recherche de ta position…');
   const [mapCenter, setMapCenter] = useState<MapCenter | null>(null);
   const [locationAllowed, setLocationAllowed] = useState(false);
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [goalDistance, setGoalDistance] = useState('5');
+  const [goalTime, setGoalTime] = useState('30:00');
+  const [goalMessage, setGoalMessage] = useState('');
+  const [goalSaved, setGoalSaved] = useState<RunGoal | null>(null);
+  const [goalSavedForUser, setGoalSavedForUser] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
   const { active, busy, error } = useRunStore();
+  useEffect(() => {
+    if (!session?.user.id) return;
+    let alive = true;
+    void AsyncStorage.getItem(goalStorageKey(session.user.id)).then((value) => {
+      if (!alive) return;
+      if (!value) {
+        setGoalSaved(null);
+        setGoalSavedForUser(session.user.id);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(value) as RunGoal;
+        if (typeof parsed.distanceKm === 'string' && typeof parsed.targetTime === 'string') {
+          setGoalDistance(parsed.distanceKm);
+          setGoalTime(parsed.targetTime);
+          setGoalSaved(parsed);
+          setGoalSavedForUser(session.user.id);
+        }
+      } catch { /* Ignore an outdated local goal value. */ }
+    }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [session?.user.id]);
   useEffect(() => {
     let alive = true;
     async function locate() {
@@ -53,6 +85,27 @@ export default function Run() {
     if (active) { router.push('/run/active'); return; }
     if (!session?.user.id) return;
     router.push({ pathname: '/run/countdown', params: { type: 'running', autoPause: autoPause ? '1' : '0' } });
+  }
+  async function saveRunGoal() {
+    const distance = Number(goalDistance.replace(',', '.'));
+    const timeMatch = /^(\d{1,3}):([0-5]\d)$/.exec(goalTime.trim());
+    const targetSeconds = timeMatch ? Number(timeMatch[1]) * 60 + Number(timeMatch[2]) : 0;
+    if (!Number.isFinite(distance) || distance <= 0 || distance > 200 || !timeMatch || targetSeconds <= 0) {
+      setGoalMessage('Entre une distance positive et un temps au format MM:SS.');
+      return;
+    }
+    if (!session?.user.id) { setGoalMessage('Connecte-toi pour enregistrer cet objectif.'); return; }
+    setSavingGoal(true);
+    setGoalMessage('');
+    const goal = { distanceKm: String(distance), targetTime: goalTime.trim() };
+    try {
+      await AsyncStorage.setItem(goalStorageKey(session.user.id), JSON.stringify(goal));
+      setGoalSaved(goal);
+      setGoalSavedForUser(session.user.id);
+      setGoalModalVisible(false);
+    } catch {
+      setGoalMessage('Enregistrement impossible. Réessaie.');
+    } finally { setSavingGoal(false); }
   }
   return <Page scroll={false}>
     <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 18, gap: 18 }}>
@@ -104,14 +157,65 @@ export default function Run() {
             {active ? 'VOIR RUN' : busy ? 'GPS…' : 'START'}
           </Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/goals')}
+        <Pressable accessibilityRole="button" onPress={() => {
+          setGoalMessage('');
+          setGoalModalVisible(true);
+        }}
           style={({ pressed }) => ({ borderRadius: 22, backgroundColor: palette.bg,
             borderWidth: 1, borderColor: palette.line,
             paddingHorizontal: 22, paddingVertical: 11,
             transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-          <Text style={{ color: palette.text, fontWeight: '900', fontSize: 12 }}>DÉFINIR UN OBJECTIF</Text>
+          <Text style={{ color: palette.text, fontWeight: '900', fontSize: 12 }}>
+            {goalSavedForUser === session?.user.id && goalSaved
+              ? `OBJECTIF · ${goalSaved.distanceKm} KM / ${goalSaved.targetTime}` : 'DÉFINIR UN OBJECTIF'}
+          </Text>
         </Pressable>
       </View>
     </View>
+    <Modal visible={goalModalVisible} transparent animationType="slide" statusBarTranslucent
+      onRequestClose={() => setGoalModalVisible(false)}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.65)' }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Fermer les objectifs"
+          onPress={() => setGoalModalVisible(false)} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+            paddingHorizontal: 24, paddingTop: 14, paddingBottom: 36, gap: 16,
+            borderWidth: 1, borderColor: '#000000' }}>
+            <View style={{ width: 42, height: 4, borderRadius: 2, backgroundColor: '#000000', alignSelf: 'center' }} />
+            <View style={{ gap: 5 }}>
+              <Text style={{ color: '#000000', fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>TON PROCHAIN DÉFI</Text>
+              <Text style={{ color: '#000000', fontSize: 27, fontWeight: '900' }}>Fixe ton objectif.</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={{ color: '#000000', fontSize: 12, fontWeight: '800' }}>DISTANCE · KM</Text>
+                <Field accessibilityLabel="Distance cible en kilomètres" keyboardType="decimal-pad"
+                  value={goalDistance} onChangeText={setGoalDistance} placeholder="5"
+                  placeholderTextColor="#000000" style={{ color: '#000000', backgroundColor: '#FFFFFF', borderColor: '#000000' }} />
+              </View>
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={{ color: '#000000', fontSize: 12, fontWeight: '800' }}>TEMPS CIBLE · MM:SS</Text>
+                <Field accessibilityLabel="Temps cible en minutes et secondes" keyboardType="numbers-and-punctuation"
+                  value={goalTime} onChangeText={setGoalTime} placeholder="30:00" maxLength={6}
+                  placeholderTextColor="#000000" style={{ color: '#000000', backgroundColor: '#FFFFFF', borderColor: '#000000' }} />
+              </View>
+            </View>
+            {goalMessage ? <Text style={{ color: '#000000', fontSize: 13, fontWeight: '700' }}>{goalMessage}</Text> : null}
+            <Pressable accessibilityRole="button" disabled={savingGoal}
+              onPress={() => void saveRunGoal()}
+              style={({ pressed }) => ({ minHeight: 54, borderRadius: 18, backgroundColor: '#000000',
+                alignItems: 'center', justifyContent: 'center', transform: [{ scale: pressed && !savingGoal ? 0.98 : 1 }] })}>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>
+                {savingGoal ? 'ENREGISTREMENT…' : 'ENREGISTRER MON OBJECTIF'}
+              </Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setGoalModalVisible(false)}
+              style={{ alignItems: 'center', paddingVertical: 8 }}>
+              <Text style={{ color: '#000000', fontWeight: '800' }}>ANNULER</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
   </Page>;
 }
