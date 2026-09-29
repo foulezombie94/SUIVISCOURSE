@@ -112,22 +112,22 @@ export default function ActiveRun() {
             {formatDuration(active.elapsedSeconds)}
           </Text>
           <Text style={{ color: paper, fontSize: 10, fontWeight: '900', letterSpacing: 1.8 }}>TEMPS</Text>
-          <Pressable accessibilityRole="button"
-            accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
-            disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
-            style={({ pressed }) => ({ width: 58, height: 58, aspectRatio: 1, borderRadius: 29,
-              backgroundColor: '#242424', borderWidth: 1, borderColor: '#585858',
-              alignItems: 'center', justifyContent: 'center', marginTop: 10, overflow: 'hidden',
-              transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
-            <Text style={{ color: paper, fontSize: 17, fontWeight: '900' }}>
-              {active.state === 'running' ? 'Ⅱ' : '▶'}
-            </Text>
-          </Pressable>
         </View>
       </View>
 
       <View style={{ alignSelf: 'stretch', height: 58, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' }}>
         <Stat label="VITESSE" value={`${speed.toFixed(1)} KM/H`} centered />
+        <Pressable accessibilityRole="button"
+          accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
+          disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
+          style={({ pressed }) => ({ position: 'absolute', left: 0, width: 58, height: 58,
+            aspectRatio: 1, borderRadius: 29, backgroundColor: '#242424',
+            borderWidth: 1, borderColor: '#585858', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
+          <Text style={{ color: paper, fontSize: 17, fontWeight: '900' }}>
+            {active.state === 'running' ? 'Ⅱ' : '▶'}
+          </Text>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
           style={({ pressed }) => ({ position: 'absolute', right: 0, width: 56, height: 56, borderRadius: 15,
