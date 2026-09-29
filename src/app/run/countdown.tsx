@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
-import { Animated, AppState, Easing, View } from 'react-native';
+import { Animated, AppState, Easing, View, useWindowDimensions } from 'react-native';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -14,6 +14,7 @@ const ink = '#000000';
 const paper = '#FFFFFF';
 
 export default function RunCountdown() {
+  const { width } = useWindowDimensions();
   const { type, autoPause } = useLocalSearchParams<{ type?: string; autoPause?: string }>();
   const { session } = useAuth();
   const start = useRunStore((state) => state.start);
@@ -62,14 +63,15 @@ export default function RunCountdown() {
     })();
   }, [activityType, autoPause, count, pulse, session?.user.id, start]);
 
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1.1] });
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
   const opacity = pulse.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 1, 1] });
+  const numberSize = Math.min(width * 0.58, 180);
   return <SafeAreaView style={{ flex: 1, backgroundColor: ink }} edges={['top', 'bottom']}>
     <StatusBar hidden />
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ opacity, transform: [{ scale }] }}>
-        <Text style={{ color: paper, fontSize: 190, fontFamily: fonts.monoBold,
-          letterSpacing: -12, includeFontPadding: false }}>
+        <Text style={{ color: paper, fontSize: numberSize, lineHeight: numberSize * 1.35,
+          fontFamily: fonts.monoBold, letterSpacing: 0, textAlign: 'center' }}>
           {count > 0 ? count : ''}
         </Text>
       </Animated.View>
