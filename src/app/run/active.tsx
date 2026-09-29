@@ -113,9 +113,9 @@ export default function ActiveRun() {
           <Pressable accessibilityRole="button"
             accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
             disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
-            style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22,
+            style={({ pressed }) => ({ width: 58, height: 58, aspectRatio: 1, borderRadius: 29,
               backgroundColor: '#242424', borderWidth: 1, borderColor: '#585858',
-              alignItems: 'center', justifyContent: 'center', marginTop: 10,
+              alignItems: 'center', justifyContent: 'center', marginTop: 10, overflow: 'hidden',
               transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
             <Text style={{ color: paper, fontSize: 17, fontWeight: '900' }}>
               {active.state === 'running' ? 'Ⅱ' : '▶'}
