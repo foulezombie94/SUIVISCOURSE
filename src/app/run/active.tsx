@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Alert, Pressable, View, useWindowDimensions } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
+import Animated, { cancelAnimation, Easing, Extrapolation, interpolate,
+  useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Circle } from 'react-native-svg';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +17,9 @@ import { fonts } from '@/constants/typography';
 const ink = '#080808';
 const paper = '#FFFFFF';
 const accent = '#FF493D';
+const stopOrange = '#FF7900';
 const ringTrack = '#3B3B3B';
+const STOP_HOLD_MS = 2200;
 
 function Stat({ label, value, centered = false }: { label: string; value: string; centered?: boolean }) {
   return <View style={{ gap: 3, alignItems: centered ? 'center' : 'flex-start' }}>
@@ -55,12 +60,60 @@ function MusicCard() {
 export default function ActiveRun() {
   const { width, height } = useWindowDimensions();
   const [mapRefresh, setMapRefresh] = useState(0);
+  const [finishing, setFinishing] = useState(false);
+  const holdingRef = useRef(false);
+  const finishingRef = useRef(false);
+  const holdProgress = useSharedValue(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - holdProgress.value) * height }],
+  }), [height]);
+  const messageStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(holdProgress.value, [0, 0.52, 0.6, 1], [0, 0, 1, 1], Extrapolation.CLAMP),
+    transform: [{ translateX: interpolate(holdProgress.value,
+      [0, 0.52, 0.92, 1], [-width, -width, 0, 0], Extrapolation.CLAMP) }],
+  }), [width]);
+  const completeHold = useCallback(() => {
+    if (!holdingRef.current || finishingRef.current) return;
+    finishingRef.current = true;
+    setFinishing(true);
+    void (async () => {
+      const saved = await finish();
+      if (saved) {
+        router.replace({ pathname: '/run/summary', params: { id: saved.id } });
+      } else {
+        finishingRef.current = false;
+        setFinishing(false);
+        holdProgress.set(withTiming(0, { duration: 280 }));
+      }
+    })();
+  }, [finish, holdProgress]);
+  const startStopHold = () => {
+    if (busy || finishingRef.current) return;
+    holdingRef.current = true;
+    cancelAnimation(holdProgress);
+    holdProgress.set(0);
+    holdProgress.set(withTiming(1, { duration: STOP_HOLD_MS, easing: Easing.linear }, (finished) => {
+      if (finished) scheduleOnRN(completeHold);
+    }));
+  };
+  const cancelStopHold = () => {
+    holdingRef.current = false;
+    if (finishingRef.current) return;
+    cancelAnimation(holdProgress);
+    holdProgress.set(withTiming(0, { duration: 280 }));
+  };
   useEffect(() => {
     const timer = setInterval(() => setMapRefresh((value) => value + 1), 5000);
     return () => clearInterval(timer);
   }, []);
-  if (!active) return <Redirect href="/(tabs)/run" />;
+  if (!active) return finishing
+    ? <View style={{ flex: 1, backgroundColor: stopOrange, alignItems: 'center', justifyContent: 'center' }}>
+      <StatusBar style="dark" />
+      <Text style={{ color: ink, fontSize: Math.min(width * 0.12, 46), fontFamily: fonts.bold,
+        textAlign: 'center' }}>COURSE{'\n'}TERMINÉE</Text>
+    </View>
+    : <Redirect href="/(tabs)/run" />;
 
   const mapHeight = Math.round(Math.min(height * 0.34, 300));
   const ringSize = Math.round(Math.min(width * 0.59, 232));
@@ -73,11 +126,6 @@ export default function ActiveRun() {
   const speed = active.movingSeconds > 0
     ? active.distanceMeters / active.movingSeconds * 3.6 : 0;
   const trackPoints = getTrackPoints();
-  const finishRun = () => Alert.alert('Terminer la course ?', 'Le résumé sera sauvegardé sur ton téléphone.',
-    [{ text: 'Continuer', style: 'cancel' }, { text: 'Terminer', onPress: async () => {
-      const saved = await finish();
-      if (saved) router.replace({ pathname: '/run/summary', params: { id: saved.id } });
-    } }]);
 
   return <SafeAreaView style={{ flex: 1, backgroundColor: ink }} edges={['top', 'bottom']}>
     <StatusBar style="light" />
@@ -128,10 +176,11 @@ export default function ActiveRun() {
           <MaterialCommunityIcons name={active.state === 'running' ? 'pause' : 'play'}
             size={25} color={ink} />
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
-          disabled={busy} onPress={finishRun}
+        <Pressable accessibilityRole="button" accessibilityLabel="Maintenir pour terminer la course"
+          accessibilityHint="Maintiens le bouton jusqu’à ce que l’orange remplisse l’écran. Relâcher avant annule."
+          disabled={busy || finishing} onPressIn={startStopHold} onPressOut={cancelStopHold}
           style={({ pressed }) => ({ position: 'absolute', right: 0, width: 56, height: 56, borderRadius: 15,
-            backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
+            backgroundColor: stopOrange, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
           <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
         </Pressable>
@@ -142,5 +191,14 @@ export default function ActiveRun() {
       <MusicCard />
       {error ? <Text style={{ alignSelf: 'stretch', color: paper, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
     </View>
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, right: 0,
+      bottom: 0, left: 0, backgroundColor: stopOrange }, fillStyle]} />
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, right: 0,
+      bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' }, messageStyle]}>
+      <Text style={{ color: ink, fontSize: Math.min(width * 0.12, 46), fontFamily: fonts.bold,
+        textAlign: 'center', lineHeight: Math.min(width * 0.14, 54) }}>
+        COURSE{'\n'}TERMINÉE
+      </Text>
+    </Animated.View>
   </SafeAreaView>;
 }
