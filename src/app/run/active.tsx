@@ -3,6 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, View, useWindowDimensions } from 'react-native';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -58,7 +59,11 @@ export default function ActiveRun() {
   const [mapRefresh, setMapRefresh] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const finishingRef = useRef(false);
+  const holdProgress = useSharedValue(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
+  const stopButtonScale = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + holdProgress.value * 0.4 }],
+  }));
   const completeHold = useCallback(() => {
     if (finishingRef.current) return;
     finishingRef.current = true;
@@ -70,9 +75,20 @@ export default function ActiveRun() {
       } else {
         finishingRef.current = false;
         setFinishing(false);
+        holdProgress.set(withSpring(0, { damping: 14, stiffness: 180 }));
       }
     })();
-  }, [finish]);
+  }, [finish, holdProgress]);
+  const startStopHold = () => {
+    if (busy || finishingRef.current) return;
+    cancelAnimation(holdProgress);
+    holdProgress.set(withTiming(1, { duration: 3000 }));
+  };
+  const cancelStopHold = () => {
+    if (finishingRef.current) return;
+    cancelAnimation(holdProgress);
+    holdProgress.set(withSpring(0, { damping: 14, stiffness: 180 }));
+  };
   useEffect(() => {
     const timer = setInterval(() => setMapRefresh((value) => value + 1), 5000);
     return () => clearInterval(timer);
@@ -145,14 +161,17 @@ export default function ActiveRun() {
           <MaterialCommunityIcons name={active.state === 'running' ? 'pause' : 'play'}
             size={25} color={ink} />
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Maintenir pour terminer la course"
-          accessibilityHint="Maintiens le bouton trois secondes. Relâcher avant annule."
-          disabled={busy || finishing} delayLongPress={3000} onLongPress={completeHold}
-          style={({ pressed }) => ({ position: 'absolute', right: 0, width: 56, height: 56, borderRadius: 15,
-            backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
-            transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
-          <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
-        </Pressable>
+        <Animated.View style={[{ position: 'absolute', right: 0, width: 58, height: 58 }, stopButtonScale]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Maintenir pour terminer la course"
+            accessibilityHint="Maintiens le bouton rond trois secondes. Relâcher avant annule."
+            disabled={busy || finishing} delayLongPress={3000} onLongPress={completeHold}
+            onPressIn={startStopHold} onPressOut={cancelStopHold}
+            style={({ pressed }) => ({ width: 58, height: 58, aspectRatio: 1, borderRadius: 29,
+              backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
+              transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
+            <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
+          </Pressable>
+        </Animated.View>
       </View>
       <View style={{ height: 4, borderRadius: 2, backgroundColor: ringTrack, overflow: 'hidden' }}>
         <View style={{ width: `${lapProgress * 100}%`, height: 4, backgroundColor: accent }} />
