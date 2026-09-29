@@ -22,6 +22,38 @@ function Stat({ label, value }: { label: string; value: string }) {
   </View>;
 }
 
+function MusicCard() {
+  return <View accessibilityLabel="Carte musique" style={{
+    alignSelf: 'stretch', minHeight: 76, borderRadius: 20, backgroundColor: '#181818',
+    borderWidth: 1, borderColor: '#343434', paddingHorizontal: 12, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 11,
+  }}>
+    <View style={{ width: 48, height: 48, borderRadius: 13, backgroundColor: '#FFFFFF',
+      alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: ink, fontSize: 25, fontWeight: '900' }}>♫</Text>
+    </View>
+    <View style={{ flex: 1, gap: 4 }}>
+      <Text style={{ color: '#BDBDBD', fontSize: 8, fontWeight: '900', letterSpacing: 1.1 }}>
+        MUSIQUE
+      </Text>
+      <Text numberOfLines={1} style={{ color: paper, fontSize: 13, fontWeight: '800' }}>
+        Choisis ta playlist
+      </Text>
+      <Text numberOfLines={1} style={{ color: '#BDBDBD', fontSize: 9 }}>
+        Garde ton rythme pendant la course
+      </Text>
+    </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Text style={{ color: '#777777', fontSize: 17, fontWeight: '900' }}>‹</Text>
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: paper,
+        alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: ink, fontSize: 13, fontWeight: '900', marginLeft: 2 }}>▶</Text>
+      </View>
+      <Text style={{ color: '#777777', fontSize: 17, fontWeight: '900' }}>›</Text>
+    </View>
+  </View>;
+}
+
 export default function ActiveRun() {
   const { width, height } = useWindowDimensions();
   const [mapRefresh, setMapRefresh] = useState(0);
@@ -32,8 +64,8 @@ export default function ActiveRun() {
   }, []);
   if (!active) return <Redirect href="/(tabs)/run" />;
 
-  const mapHeight = Math.round(Math.min(height * 0.4, 360));
-  const ringSize = Math.round(Math.min(width * 0.67, 270));
+  const mapHeight = Math.round(Math.min(height * 0.34, 300));
+  const ringSize = Math.round(Math.min(width * 0.59, 232));
   const center = ringSize / 2;
   const radius = center - 13;
   const circumference = 2 * Math.PI * radius;
@@ -110,6 +142,7 @@ export default function ActiveRun() {
       <View style={{ height: 4, borderRadius: 2, backgroundColor: ringTrack, overflow: 'hidden' }}>
         <View style={{ width: `${lapProgress * 100}%`, height: 4, backgroundColor: accent }} />
       </View>
+      <MusicCard />
       {error ? <Text style={{ alignSelf: 'stretch', color: paper, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
     </View>
   </SafeAreaView>;
