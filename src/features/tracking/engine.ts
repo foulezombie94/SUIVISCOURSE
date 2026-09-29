@@ -57,7 +57,6 @@ export function ingest(activity: ActiveActivity, point: Point, points: Point[]):
     const stationarySeconds = activity.stationarySeconds + Math.min(dt, 10);
     points[points.length - 1] = point;
     return { ...activity, lastObservationAt: point.timestamp, stationarySeconds, recoverySeconds: 0,
-      ...elevationBaseline(point),
       state: activity.autoPause && stationarySeconds >= 12 ? 'autoPaused' : activity.state };
   }
   const pointDt = (point.timestamp - previous.timestamp) / 1000;
@@ -69,7 +68,7 @@ export function ingest(activity: ActiveActivity, point: Point, points: Point[]):
     const stationarySeconds = activity.stationarySeconds + Math.min(dt, 10);
     points[points.length - 1] = point;
     return { ...activity, lastObservationAt: point.timestamp,
-      stationarySeconds, recoverySeconds: 0, ...elevationBaseline(point),
+      stationarySeconds, recoverySeconds: 0,
       state: activity.autoPause && stationarySeconds >= 12 ? 'autoPaused' : activity.state };
   }
   const recoverySeconds = activity.state === 'autoPaused' ? activity.recoverySeconds + Math.min(dt, 5) : 0;
@@ -82,13 +81,12 @@ export function ingest(activity: ActiveActivity, point: Point, points: Point[]):
   const nextDistance = activity.distanceMeters + meters;
   const altitude = reliableAltitude(point);
   const previousAltitude = reliableAltitude(previous);
-  const smoothedAltitudeMeters = altitude == null ? null :
-    previousAltitude == null ? altitude :
-      (activity.smoothedAltitudeMeters ?? previousAltitude) * (1 - ALTITUDE_SMOOTHING) +
-        altitude * ALTITUDE_SMOOTHING;
-  const anchor = previousAltitude == null ? smoothedAltitudeMeters :
-    activity.elevationAnchorMeters ?? previousAltitude;
-  const elevation = smoothedAltitudeMeters == null || anchor == null || previousAltitude == null
+  const priorSmoothedAltitude = activity.smoothedAltitudeMeters ?? previousAltitude;
+  const smoothedAltitudeMeters = altitude == null ? priorSmoothedAltitude :
+    priorSmoothedAltitude == null ? altitude :
+      priorSmoothedAltitude * (1 - ALTITUDE_SMOOTHING) + altitude * ALTITUDE_SMOOTHING;
+  const anchor = activity.elevationAnchorMeters ?? previousAltitude ?? smoothedAltitudeMeters;
+  const elevation = smoothedAltitudeMeters == null || anchor == null
     ? 0 : smoothedAltitudeMeters - anchor;
   const confirmedElevation = Math.abs(elevation) >= ELEVATION_THRESHOLD_METERS ? elevation : 0;
   const splits = [...activity.splits];
