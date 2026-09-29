@@ -15,10 +15,12 @@ const paper = '#FFFFFF';
 const accent = '#FF493D';
 const ringTrack = '#3B3B3B';
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return <View style={{ gap: 3 }}>
-    <Text style={{ color: '#BDBDBD', fontSize: 9, fontWeight: '800', letterSpacing: 0.7 }}>{label}</Text>
-    <Text style={{ color: paper, fontSize: 13, fontFamily: fonts.monoBold }}>{value}</Text>
+function Stat({ label, value, centered = false }: { label: string; value: string; centered?: boolean }) {
+  return <View style={{ gap: 3, alignItems: centered ? 'center' : 'flex-start' }}>
+    <Text style={{ color: '#BDBDBD', fontSize: 9, fontWeight: '800', letterSpacing: 0.7,
+      textAlign: centered ? 'center' : 'left' }}>{label}</Text>
+    <Text style={{ color: paper, fontSize: 13, fontFamily: fonts.monoBold,
+      textAlign: centered ? 'center' : 'left' }}>{value}</Text>
   </View>;
 }
 
@@ -124,11 +126,11 @@ export default function ActiveRun() {
         </View>
       </View>
 
-      <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-        <Stat label="VITESSE" value={`${speed.toFixed(1)} KM/H`} />
+      <View style={{ alignSelf: 'stretch', height: 58, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' }}>
+        <Stat label="VITESSE" value={`${speed.toFixed(1)} KM/H`} centered />
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
-          style={({ pressed }) => ({ width: 56, height: 56, borderRadius: 15,
+          style={({ pressed }) => ({ position: 'absolute', right: 0, width: 56, height: 56, borderRadius: 15,
             backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
           <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
