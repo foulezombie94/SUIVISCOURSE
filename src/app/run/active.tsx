@@ -21,10 +21,10 @@ function Metric({ label, value, unit, height, tone = 'dark' }: {
   const backgroundColor = tone === 'dark' ? charcoal : distancePaper;
   const textColor = tone === 'dark' ? paper : ink;
   return <View style={{ flex: 1, minWidth: 0, height, borderRadius: 18,
-    paddingVertical: 13, paddingHorizontal: 13, justifyContent: 'space-between', backgroundColor }}>
+    paddingVertical: 15, paddingHorizontal: 14, justifyContent: 'space-between', backgroundColor }}>
     <Text numberOfLines={1} style={{ color: textColor, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
-      style={{ color: textColor, fontSize: 25, fontFamily: fonts.monoBold }}>{value}</Text>
+      style={{ color: textColor, fontSize: 28, fontFamily: fonts.monoBold }}>{value}</Text>
     <Text numberOfLines={1} style={{ color: textColor, fontSize: 10, fontWeight: '800' }}>{unit}</Text>
   </View>;
 }
@@ -32,7 +32,7 @@ function Metric({ label, value, unit, height, tone = 'dark' }: {
 export default function ActiveRun() {
   const { width } = useWindowDimensions();
   const cardWidth = (width - 28 - 9) / 2;
-  const cardHeight = Math.round(Math.min(140, Math.max(90, cardWidth * 0.75)));
+  const cardHeight = Math.round(Math.min(156, Math.max(100, cardWidth * 0.84)));
   const [mapRefresh, setMapRefresh] = useState(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function ActiveRun() {
           style={({ pressed }) => ({ flex: 1, height: cardHeight,
             borderRadius: 18, backgroundColor: stopLime, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.98 : 1 }] })}>
-          <Text style={{ color: ink, fontSize: 19, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
+          <Text style={{ color: ink, fontSize: 21, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
         </Pressable>
       </View>
       {error ? <Text style={{ color: paper, backgroundColor: ink, padding: 8,
