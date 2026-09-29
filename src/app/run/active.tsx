@@ -14,8 +14,9 @@ import { fonts } from '@/constants/typography';
 
 const ink = '#080808';
 const paper = '#FFFFFF';
-const accent = '#FF493D';
-const ringTrack = '#3B3B3B';
+const accent = '#C8F23A';
+const stopAccent = '#FF493D';
+const ringTrack = '#262626';
 
 function Stat({ label, value, centered = false }: { label: string; value: string; centered?: boolean }) {
   return <View style={{ gap: 3, alignItems: centered ? 'center' : 'flex-start' }}>
@@ -29,10 +30,10 @@ function Stat({ label, value, centered = false }: { label: string; value: string
 
 function MusicCard() {
   return <View accessibilityLabel="Lecteur musique, prochain morceau Side Bend" style={{
-    alignSelf: 'stretch', height: 64, borderRadius: 20, backgroundColor: '#161616',
-    borderWidth: 2, borderColor: '#E3433B', padding: 5,
+    alignSelf: 'stretch', height: 64, borderRadius: 20, backgroundColor: '#111111',
+    borderWidth: 1, borderColor: '#343434', padding: 5,
   }}>
-    <View style={{ flex: 1, borderRadius: 14, backgroundColor: '#252525',
+    <View style={{ flex: 1, borderRadius: 14, backgroundColor: '#171717',
       paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: '#D8D8D8',
         alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -101,8 +102,8 @@ export default function ActiveRun() {
     </View>
     : <Redirect href="/(tabs)/run" />;
 
-  const mapHeight = Math.round(Math.min(height * 0.34, 300));
-  const ringSize = Math.round(Math.min(width * 0.59, 232));
+  const mapHeight = Math.round(Math.min(height * 0.44, 390));
+  const ringSize = Math.round(Math.min(width * 0.62, 240));
   const center = ringSize / 2;
   const radius = center - 13;
   const circumference = 2 * Math.PI * radius;
@@ -115,24 +116,41 @@ export default function ActiveRun() {
 
   return <SafeAreaView style={{ flex: 1, backgroundColor: ink }} edges={['top', 'bottom']}>
     <StatusBar style="light" />
-    <View style={{ height: mapHeight, backgroundColor: ink }}>
+    <View style={{ height: mapHeight, backgroundColor: ink, overflow: 'hidden' }}>
       {trackPoints.length > 0
         ? <RouteMap points={trackPoints} height={mapHeight} refreshToken={mapRefresh} followCurrent fill interactive />
         : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <Text style={{ color: paper, fontSize: 38 }}>◎</Text>
           <Text style={{ color: paper, fontWeight: '800' }}>Recherche du tracé GPS…</Text>
         </View>}
+      <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.28)' }} />
+      <View style={{ position: 'absolute', top: 8, left: 22, right: 22,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(8,8,8,0.78)',
+          alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#353535' }}>
+          <MaterialCommunityIcons name="run" size={22} color={accent} />
+        </View>
+        <View style={{ alignItems: 'center', gap: 3 }}>
+          <Text style={{ color: paper, fontSize: 15, fontWeight: '900', letterSpacing: 2 }}>RUNNING</Text>
+          <Text style={{ color: '#D4D4D4', fontSize: 9, fontWeight: '700', letterSpacing: 1.2 }}>
+            {active.state === 'autoPaused' ? 'PAUSE AUTOMATIQUE' : active.state === 'paused' ? 'EN PAUSE' : 'SÉANCE EN COURS'}
+          </Text>
+        </View>
+        <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(8,8,8,0.78)',
+          alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#353535' }}>
+          <MaterialCommunityIcons name="crosshairs-gps" size={20} color={paper} />
+        </View>
+      </View>
     </View>
 
     <View style={{ flex: 1, backgroundColor: ink, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-      marginTop: -18, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 12, gap: 8 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Stat label="DISTANCE" value={active.distanceMeters < 1000
-          ? `${Math.round(active.distanceMeters)} M` : `${formatKm(active.distanceMeters)} KM`} />
-        <Text style={{ color: paper, fontSize: 11, fontWeight: '900', letterSpacing: 1.3 }}>
-          {active.state === 'autoPaused' ? 'PAUSE AUTO' : active.state === 'paused' ? 'EN PAUSE' : 'COURSE'}
-        </Text>
-        <Stat label="ALLURE / KM" value={formatPace(pace)} />
+      marginTop: -22, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 12, gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 }}>
+        <Stat label="TEMPS" value={formatDuration(active.elapsedSeconds)} />
+        <View style={{ width: 1, height: 28, backgroundColor: '#333333' }} />
+        <Stat label="ALLURE MOY." value={formatPace(pace)} centered />
+        <View style={{ width: 1, height: 28, backgroundColor: '#333333' }} />
+        <Stat label="VITESSE" value={`${speed.toFixed(1)} KM/H`} centered />
       </View>
       <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
         <Svg width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}
@@ -143,25 +161,23 @@ export default function ActiveRun() {
             strokeWidth={8} strokeLinecap="round" strokeDasharray={`${circumference * lapProgress} ${circumference}`} />
         </Svg>
         <View style={{ alignItems: 'center', gap: 5 }}>
-          <Text style={{ color: paper, fontSize: 38, fontFamily: fonts.monoBold,
+          <Text style={{ color: paper, fontSize: 47, fontFamily: fonts.monoBold,
             fontWeight: '700', fontVariant: ['tabular-nums'] }}>
-            {formatDuration(active.elapsedSeconds)}
+            {formatKm(active.distanceMeters)}
           </Text>
-          <Text style={{ color: paper, fontSize: 10, fontWeight: '900', letterSpacing: 1.8 }}>TEMPS</Text>
+          <Text style={{ color: '#C8F23A', fontSize: 10, fontWeight: '900', letterSpacing: 2 }}>KILOMÈTRES</Text>
         </View>
       </View>
 
-      <View style={{ alignSelf: 'stretch', height: 58, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' }}>
-        <Stat label="VITESSE" value={`${speed.toFixed(1)} KM/H`} centered />
+      <View style={{ alignSelf: 'stretch', height: 66, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' }}>
         <Pressable accessibilityRole="button"
           accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
           disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
-          style={({ pressed }) => ({ position: 'absolute', left: 0, width: 58, height: 58,
-            aspectRatio: 1, borderRadius: 29, backgroundColor: paper,
+          style={({ pressed }) => ({ position: 'absolute', left: 0, width: 66, height: 66,
+            aspectRatio: 1, borderRadius: 33, backgroundColor: accent,
             alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden', transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
-          <MaterialCommunityIcons name={active.state === 'running' ? 'pause' : 'play'}
-            size={25} color={ink} />
+          <MaterialCommunityIcons name={active.state === 'running' ? 'pause' : 'play'} size={27} color={ink} />
         </Pressable>
         <Animated.View style={[{ position: 'absolute', right: 0, width: 58, height: 58 }, stopButtonScale]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Maintenir pour terminer la course"
@@ -169,7 +185,7 @@ export default function ActiveRun() {
             disabled={busy || finishing}
             onPressIn={startStopHold} onPressOut={cancelStopHold}
             style={({ pressed }) => ({ width: 58, height: 58, aspectRatio: 1, borderRadius: 29,
-              backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
+              backgroundColor: stopAccent, alignItems: 'center', justifyContent: 'center',
               transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
             <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
           </Pressable>
