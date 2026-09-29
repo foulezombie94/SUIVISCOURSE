@@ -95,15 +95,15 @@ export default function Profile() {
     <ProfileEyebrow>EN CHIFFRES</ProfileEyebrow>
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <ProfilePanel style={{ flex: 1 }}><Text style={{ color: ink }}>DISTANCE</Text>
-        <Text style={{ color: ink, fontSize: 26, fontFamily: fonts.monoBold }}>{formatKm(totals.data?.total_distance_meters ?? 0)} KM</Text></ProfilePanel>
+        <Text style={{ color: ink, fontSize: 26, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatKm(totals.data?.total_distance_meters ?? 0)} KM</Text></ProfilePanel>
       <ProfilePanel style={{ flex: 1 }}><Text style={{ color: ink }}>SORTIES</Text>
-        <Text style={{ color: ink, fontSize: 26, fontFamily: fonts.monoBold }}>{totals.data?.run_count ?? 0}</Text></ProfilePanel>
+        <Text style={{ color: ink, fontSize: 26, fontFamily: fonts.monoBold, fontWeight: '700' }}>{totals.data?.run_count ?? 0}</Text></ProfilePanel>
     </View>
     <ProfilePanel><Text style={{ color: ink }}>TEMPS TOTAL</Text>
-      <Text style={{ color: ink, fontSize: 25, fontFamily: fonts.monoBold }}>{formatDuration(totals.data?.total_elapsed_seconds ?? 0)}</Text></ProfilePanel>
+      <Text style={{ color: ink, fontSize: 25, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatDuration(totals.data?.total_elapsed_seconds ?? 0)}</Text></ProfilePanel>
     <ProfileEyebrow>PROGRESSION</ProfileEyebrow>
     <ProfilePanel><Text style={{ color: ink }}>DERNIER RUN SCORE</Text>
-      <Text style={{ color: ink, fontSize: 44, fontFamily: fonts.monoBold }}>{latestScore.data?.score ?? '—'}</Text>
+      <Text style={{ color: ink, fontSize: 44, fontFamily: fonts.monoBold, fontWeight: '700' }}>{latestScore.data?.score ?? '—'}</Text>
       <Text style={{ color: ink }}>Calculé par rapport à tes sorties précédentes.</Text></ProfilePanel>
     <ProfileEyebrow>OBJECTIFS</ProfileEyebrow>
     {(goals.data ?? []).map((goal) => <ProfilePanel key={goal.goal_id}>

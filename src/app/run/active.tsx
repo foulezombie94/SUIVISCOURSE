@@ -21,6 +21,7 @@ function Stat({ label, value, centered = false }: { label: string; value: string
     <Text style={{ color: '#BDBDBD', fontSize: 9, fontWeight: '800', letterSpacing: 0.7,
       textAlign: centered ? 'center' : 'left' }}>{label}</Text>
     <Text style={{ color: paper, fontSize: 13, fontFamily: fonts.monoBold,
+      fontWeight: '700', fontVariant: ['tabular-nums'],
       textAlign: centered ? 'center' : 'left' }}>{value}</Text>
   </View>;
 }
@@ -124,7 +125,8 @@ export default function ActiveRun() {
             strokeWidth={8} strokeLinecap="round" strokeDasharray={`${circumference * lapProgress} ${circumference}`} />
         </Svg>
         <View style={{ alignItems: 'center', gap: 5 }}>
-          <Text style={{ color: paper, fontSize: 38, fontFamily: fonts.monoBold }}>
+          <Text style={{ color: paper, fontSize: 38, fontFamily: fonts.monoBold,
+            fontWeight: '700', fontVariant: ['tabular-nums'] }}>
             {formatDuration(active.elapsedSeconds)}
           </Text>
           <Text style={{ color: paper, fontSize: 10, fontWeight: '900', letterSpacing: 1.8 }}>TEMPS</Text>

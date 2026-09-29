@@ -15,8 +15,8 @@ export default function TabLayout() {
   if (ready && !session) return <Redirect href="/(auth)/login" />;
   return <NativeTabs backgroundColor={palette.surface} tintColor={activeColor}
     iconColor={{ default: normalColor, selected: activeColor }}
-    labelStyle={{ default: { color: normalColor, fontFamily: fonts.regular },
-      selected: { color: activeColor, fontFamily: fonts.bold } }}>
+    labelStyle={{ default: { color: normalColor, fontFamily: fonts.regular, fontWeight: '400' },
+      selected: { color: activeColor, fontFamily: fonts.bold, fontWeight: '700' } }}>
     <NativeTabs.Trigger name="index">
       <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
       <NativeTabs.Trigger.Label>Accueil</NativeTabs.Trigger.Label>

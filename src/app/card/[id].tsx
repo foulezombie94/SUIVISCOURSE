@@ -72,13 +72,13 @@ export default function CardScreen() {
       <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 26 }}>ÉLAN /</Text>
       <View>
         <Text style={{ color: theme.text, letterSpacing: 2 }}>RUN DIFFERENT</Text>
-        <Text style={{ color: theme.text, fontSize: 56, fontFamily: fonts.monoBold }}>{formatKm(activity.distanceMeters)}</Text>
+        <Text style={{ color: theme.text, fontSize: 56, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatKm(activity.distanceMeters)}</Text>
         <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 21 }}>KM</Text>
       </View>
       <RouteArt points={activity.points} hideRadiusMeters={activity.hideRadiusMeters} color={theme.accent} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ color: theme.text, fontFamily: fonts.monoBold }}>{formatDuration(activity.elapsedSeconds)}</Text>
-        <Text style={{ color: theme.text, fontFamily: fonts.monoBold }}>{formatPace(activity.averagePaceSecPerKm)} /KM</Text>
+        <Text style={{ color: theme.text, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatDuration(activity.elapsedSeconds)}</Text>
+        <Text style={{ color: theme.text, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatPace(activity.averagePaceSecPerKm)} /KM</Text>
       </View>
       <Text style={{ color: theme.text, fontSize: 11 }}>Départ et arrivée masqués sur cette carte</Text>
     </View>

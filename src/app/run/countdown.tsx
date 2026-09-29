@@ -71,7 +71,7 @@ export default function RunCountdown() {
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ opacity, transform: [{ scale }] }}>
         <Text style={{ color: paper, fontSize: numberSize, lineHeight: numberSize * 1.35,
-          fontFamily: fonts.monoBold, letterSpacing: 0, textAlign: 'center' }}>
+          fontFamily: fonts.monoBold, fontWeight: '700', letterSpacing: 0, textAlign: 'center' }}>
           {count > 0 ? count : ''}
         </Text>
       </Animated.View>
