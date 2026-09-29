@@ -23,6 +23,7 @@ export type ActiveActivity = {
   splits: Split[]; state: 'running' | 'paused' | 'autoPaused';
   autoPause: boolean; stationarySeconds: number; recoverySeconds: number;
   lastSplitMovingSeconds: number; discardNextLocation?: boolean;
+  smoothedAltitudeMeters?: number | null; elevationAnchorMeters?: number | null;
 };
 export type Profile = {
   id: string; username: string; display_name: string;

@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { AppState } from 'react-native';
 import type { ActiveActivity, Activity, ActivityType, Point } from '@/types/domain';
-import { averagePace, ingest, tick } from '@/features/tracking/engine';
+import { averagePace, ingest, MAX_GPS_ACCURACY_METERS, tick } from '@/features/tracking/engine';
 import { clearActive, loadActive, saveActive, saveActivity } from '@/services/local-activities';
 import { syncPending } from '@/services/activities';
 
@@ -39,7 +39,7 @@ async function beginWatch() {
   stopWatch();
   const generation = watchGeneration;
   const subscription = await Location.watchPositionAsync({
-    accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2500, distanceInterval: 0,
+    accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0,
   }, (position) => {
     if (generation !== watchGeneration) return;
     const current = useRunStore.getState().active;
@@ -105,7 +105,7 @@ export const useRunStore = create<RunState>((set, get) => ({
       if (!permission.granted) throw new Error('Autorise la localisation pour enregistrer ta course.');
       if (!await Location.hasServicesEnabledAsync()) throw new Error('Active la localisation sur ton téléphone.');
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      if ((position.coords.accuracy ?? 1000) > 50) {
+      if ((position.coords.accuracy ?? 1000) > MAX_GPS_ACCURACY_METERS) {
         throw new Error('Signal GPS trop faible. Réessaie à l’extérieur.');
       }
       const now = Date.now();

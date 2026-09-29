@@ -25,6 +25,20 @@ function fromRemote(row: Remote): Activity {
     points: [], splits: [], syncState: 'synced', verificationStatus: row.verification_status };
 }
 
+function syncTrackPoints(points: Point[]): { point: Point; sequence: number }[] {
+  const selected: { point: Point; sequence: number }[] = [];
+  let lastRecordedAt = -Infinity;
+  for (let sequence = 0; sequence < points.length; sequence += 1) {
+    const point = points[sequence];
+    if (sequence !== 0 && sequence !== points.length - 1 && point.timestamp - lastRecordedAt < 3000) {
+      continue;
+    }
+    lastRecordedAt = point.timestamp;
+    selected.push({ point, sequence });
+  }
+  return selected;
+}
+
 async function syncRecords(activity: Activity) {
   const current = await supabase.from('personal_records').select('record_type,value').eq('user_id', activity.userId);
   if (current.error) throw current.error;
@@ -61,9 +75,10 @@ export async function syncPending(userId: string) {
       hide_radius_meters: activity.hideRadiusMeters,
     }, { onConflict: 'id', ignoreDuplicates: true });
     if (error) throw error;
-    for (let offset = 0; offset < activity.points.length; offset += 100) {
-      const rows = activity.points.slice(offset, offset + 100).map((point, index) => ({
-        activity_id: activity.id, user_id: userId, sequence: offset + index,
+    const remotePoints = syncTrackPoints(activity.points);
+    for (let offset = 0; offset < remotePoints.length; offset += 100) {
+      const rows = remotePoints.slice(offset, offset + 100).map(({ point, sequence }) => ({
+        activity_id: activity.id, user_id: userId, sequence,
         latitude: point.latitude, longitude: point.longitude, altitude: point.altitude,
         accuracy: point.accuracy, altitude_accuracy: point.altitudeAccuracy,
         speed: point.speed, recorded_at: new Date(point.timestamp).toISOString(),
