@@ -41,8 +41,8 @@ export default function ActiveRun() {
       if (saved) router.replace({ pathname: '/run/summary', params: { id: saved.id } });
     } }]);
 
-  return <SafeAreaView style={{ flex: 1, backgroundColor: ink }} edges={['top', 'bottom']}>
-    <StatusBar style="light" />
+  return <SafeAreaView style={{ flex: 1, backgroundColor: paper }} edges={['top', 'bottom']}>
+    <StatusBar style="dark" />
     <View style={{ height: Math.min(height * 0.53, 480), backgroundColor: ink }}>
       {trackPoints.length > 0
         ? <RouteMap points={trackPoints} height={Math.min(height * 0.53, 480)} refreshToken={mapRefresh} followCurrent />
@@ -65,7 +65,7 @@ export default function ActiveRun() {
       </View>
     </View>
 
-    <View style={{ flex: 1, backgroundColor: ink, borderTopLeftRadius: 26, borderTopRightRadius: 26,
+    <View style={{ flex: 1, backgroundColor: paper, borderTopLeftRadius: 26, borderTopRightRadius: 26,
       marginTop: -20, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 10, gap: 9 }}>
       <View style={{ flexDirection: 'row', gap: 9, flex: 1 }}>
         <Metric label="TEMPS" value={formatDuration(active.elapsedSeconds)} />
@@ -82,7 +82,7 @@ export default function ActiveRun() {
           <Text style={{ color: ink, fontSize: 17, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
         </Pressable>
       </View>
-      {error ? <Text style={{ color: paper, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
+      {error ? <Text style={{ color: ink, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
     </View>
   </SafeAreaView>;
 }
