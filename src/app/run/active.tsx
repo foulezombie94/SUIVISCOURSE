@@ -48,7 +48,7 @@ export default function ActiveRun() {
     <StatusBar style="light" />
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: ink }}>
       {trackPoints.length > 0
-        ? <RouteMap points={trackPoints} refreshToken={mapRefresh} followCurrent fill />
+        ? <RouteMap points={trackPoints} refreshToken={mapRefresh} followCurrent fill interactive />
         : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <Text style={{ color: paper, fontSize: 38 }}>◎</Text>
           <Text style={{ color: paper, fontWeight: '800' }}>Recherche du tracé GPS…</Text>

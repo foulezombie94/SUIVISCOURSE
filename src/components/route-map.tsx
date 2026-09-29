@@ -4,8 +4,9 @@ import type { Point } from '@/types/domain';
 import { palette } from '@/constants/palette';
 
 export const RouteMap = memo(function RouteMap({ points, height = 230,
-  refreshToken, followCurrent = false, fill = false }: {
-    points: Point[]; height?: number; refreshToken?: number; followCurrent?: boolean; fill?: boolean;
+  refreshToken, followCurrent = false, fill = false, interactive = false }: {
+    points: Point[]; height?: number; refreshToken?: number; followCurrent?: boolean;
+    fill?: boolean; interactive?: boolean;
   }) {
   void refreshToken;
   if (!points.length) return null;
@@ -24,14 +25,15 @@ export const RouteMap = memo(function RouteMap({ points, height = 230,
   const stride = Math.max(1, Math.ceil(visiblePoints.length / 500));
   const sampled = visiblePoints.filter((_, index) => index % stride === 0 || index === visiblePoints.length - 1);
   const coords = sampled.map((point) => ({ latitude: point.latitude, longitude: point.longitude }));
+  const region = {
+    latitude: (minLat + maxLat) / 2, longitude: (minLon + maxLon) / 2,
+    latitudeDelta: followCurrent ? 0.008 : Math.max(0.008, (maxLat - minLat) * 1.5),
+    longitudeDelta: followCurrent ? 0.008 : Math.max(0.008, (maxLon - minLon) * 1.5),
+  };
   return <MapView
     style={[fill ? { flex: 1, width: '100%' } : { height, width: '100%', borderRadius: 20 }]}
-    region={{
-      latitude: (minLat + maxLat) / 2, longitude: (minLon + maxLon) / 2,
-      latitudeDelta: followCurrent ? 0.008 : Math.max(0.008, (maxLat - minLat) * 1.5),
-      longitudeDelta: followCurrent ? 0.008 : Math.max(0.008, (maxLon - minLon) * 1.5),
-    }}
-    scrollEnabled={false} zoomEnabled={false} pitchEnabled={false} rotateEnabled={false}>
+    {...(interactive ? { initialRegion: region } : { region })}
+    scrollEnabled={interactive} zoomEnabled={interactive} pitchEnabled={false} rotateEnabled={false}>
     {coords.length >= 2 ? <Polyline coordinates={coords} strokeColor={palette.accent} strokeWidth={5} /> : null}
     <Marker coordinate={coords[0]} pinColor={palette.cyan} title={followCurrent ? 'Parcours' : 'Départ'} />
     {coords.length >= 2 ? <Marker coordinate={coords[coords.length - 1]}
