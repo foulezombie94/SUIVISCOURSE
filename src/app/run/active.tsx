@@ -14,13 +14,16 @@ const paper = '#FFFFFF';
 const charcoal = '#3D414A';
 const distancePaper = '#EEEEEE';
 const stopLime = '#DDE872';
+const tileFrame = (height: number) => ({
+  flex: 1 as const, minWidth: 0, height, borderRadius: 18,
+});
 
 function Metric({ label, value, unit, height, tone = 'dark' }: {
   label: string; value: string; unit: string; height: number; tone?: 'dark' | 'light';
 }) {
   const backgroundColor = tone === 'dark' ? charcoal : distancePaper;
   const textColor = tone === 'dark' ? paper : ink;
-  return <View style={{ flex: 1, minWidth: 0, height, borderRadius: 18,
+  return <View style={{ ...tileFrame(height),
     paddingVertical: 15, paddingHorizontal: 14, justifyContent: 'space-between', backgroundColor }}>
     <Text numberOfLines={1} style={{ color: textColor, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
@@ -85,8 +88,8 @@ export default function ActiveRun() {
           unit={active.distanceMeters < 1000 ? 'M' : 'KM'} height={cardHeight} tone="light" />
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
-          style={({ pressed }) => ({ flex: 1, height: cardHeight,
-            borderRadius: 18, backgroundColor: stopLime, alignItems: 'center', justifyContent: 'center',
+          style={({ pressed }) => ({ ...tileFrame(cardHeight),
+            backgroundColor: stopLime, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.98 : 1 }] })}>
           <Text style={{ color: ink, fontSize: 21, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
         </Pressable>
