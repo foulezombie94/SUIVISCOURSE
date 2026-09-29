@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/components/typography';
 import { ActivityTile } from '@/components/activity-tile';
 import { Button, Empty, Eyebrow, Page, Panel, Title } from '@/components/ui';
 import { RouteMap } from '@/components/route-map';

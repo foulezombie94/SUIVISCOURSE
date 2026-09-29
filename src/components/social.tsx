@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { palette } from '@/constants/palette';
 import type { Profile } from '@/types/domain';
 

@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FriendActivityTile } from '@/components/friend-activity-tile';
 import { Button, Eyebrow, Empty, Title } from '@/components/ui';

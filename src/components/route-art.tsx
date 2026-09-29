@@ -2,7 +2,7 @@ import Svg, { Circle, Polyline } from 'react-native-svg';
 import type { Point } from '@/types/domain';
 import { safeRoute } from '@/features/sharing/privacy';
 
-export function RouteArt({ points, hideRadiusMeters = 400, color = '#C7F36B' }: {
+export function RouteArt({ points, hideRadiusMeters = 400, color = '#FFFFFF' }: {
   points: Point[]; hideRadiusMeters?: number; color?: string;
 }) {
   const safe = safeRoute(points, hideRadiusMeters);
@@ -18,7 +18,7 @@ export function RouteArt({ points, hideRadiusMeters = 400, color = '#C7F36B' }: 
   const last = coords.split(' ').at(-1)!.split(',').map(Number);
   return <Svg width="100%" height={160} viewBox="0 0 300 160">
     <Polyline points={coords} fill="none" stroke={color} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
-    <Circle cx={first[0]} cy={first[1]} r={6} fill="#8BD8D0" />
-    <Circle cx={last[0]} cy={last[1]} r={6} fill="#FFA87E" />
+    <Circle cx={first[0]} cy={first[1]} r={6} fill={color} />
+    <Circle cx={last[0]} cy={last[1]} r={6} fill={color} />
   </Svg>;
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Eyebrow, Page, Panel, Title } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';

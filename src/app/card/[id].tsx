@@ -4,18 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { File } from 'expo-file-system';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Eyebrow, Page, Title } from '@/components/ui';
 import { RouteArt } from '@/components/route-art';
 import { palette } from '@/constants/palette';
+import { fonts } from '@/constants/typography';
 import { useAuth } from '@/features/auth/auth-provider';
 import { getActivity } from '@/services/activities';
 import { formatDuration, formatKm, formatPace } from '@/utils/format';
 
 const formats = { '9:16': 568, '1:1': 320, '4:5': 400 } as const;
-const styles = { DARK: { background: '#14211D', text: '#F4F8F1', accent: '#C7F36B' },
-  LIGHT: { background: '#F1F3E8', text: '#14211D', accent: '#357F59' },
-  NEON: { background: '#171328', text: '#FFFFFF', accent: '#D5FF3F' } } as const;
+const styles = {
+  NOIR: { background: '#000000', text: '#FFFFFF', accent: '#FFFFFF' },
+  BLANC: { background: '#FFFFFF', text: '#000000', accent: '#000000' },
+} as const;
 export default function CardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
@@ -23,7 +26,7 @@ export default function CardScreen() {
   const query = useQuery({ queryKey: ['activity', userId, id],
     queryFn: () => getActivity(userId, id ?? ''), enabled: !!userId && !!id });
   const [format, setFormat] = useState<keyof typeof formats>('9:16');
-  const [styleName, setStyleName] = useState<keyof typeof styles>('DARK');
+  const [styleName, setStyleName] = useState<keyof typeof styles>('NOIR');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const ref = useRef<View>(null);
@@ -50,6 +53,7 @@ export default function CardScreen() {
     <View style={{ flexDirection: 'row', gap: 9 }}>
       {(Object.keys(formats) as (keyof typeof formats)[]).map((item) => <Pressable key={item}
         onPress={() => setFormat(item)} style={{ padding: 12, borderRadius: 12,
+          borderWidth: 1, borderColor: palette.line,
           backgroundColor: item === format ? palette.accent : palette.surface }}>
         <Text style={{ color: item === format ? palette.accentText : palette.text, fontWeight: '800' }}>{item}</Text>
       </Pressable>)}
@@ -57,6 +61,7 @@ export default function CardScreen() {
     <View style={{ flexDirection: 'row', gap: 9 }}>
       {(Object.keys(styles) as (keyof typeof styles)[]).map((item) => <Pressable key={item}
         onPress={() => setStyleName(item)} style={{ padding: 12, borderRadius: 12,
+          borderWidth: 1, borderColor: palette.line,
           backgroundColor: item === styleName ? palette.accent : palette.surface }}>
         <Text style={{ color: item === styleName ? palette.accentText : palette.text, fontWeight: '800' }}>{item}</Text>
       </Pressable>)}
@@ -66,16 +71,16 @@ export default function CardScreen() {
       alignSelf: 'center', overflow: 'hidden' }}>
       <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 26 }}>ÉLAN /</Text>
       <View>
-        <Text style={{ color: theme.text, opacity: 0.7, letterSpacing: 2 }}>RUN DIFFERENT</Text>
-        <Text style={{ color: theme.text, fontSize: 56, fontWeight: '900' }}>{formatKm(activity.distanceMeters)}</Text>
+        <Text style={{ color: theme.text, letterSpacing: 2 }}>RUN DIFFERENT</Text>
+        <Text style={{ color: theme.text, fontSize: 56, fontFamily: fonts.monoBold }}>{formatKm(activity.distanceMeters)}</Text>
         <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 21 }}>KM</Text>
       </View>
       <RouteArt points={activity.points} hideRadiusMeters={activity.hideRadiusMeters} color={theme.accent} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ color: theme.text, fontWeight: '800' }}>{formatDuration(activity.elapsedSeconds)}</Text>
-        <Text style={{ color: theme.text, fontWeight: '800' }}>{formatPace(activity.averagePaceSecPerKm)} /KM</Text>
+        <Text style={{ color: theme.text, fontFamily: fonts.monoBold }}>{formatDuration(activity.elapsedSeconds)}</Text>
+        <Text style={{ color: theme.text, fontFamily: fonts.monoBold }}>{formatPace(activity.averagePaceSecPerKm)} /KM</Text>
       </View>
-      <Text style={{ color: theme.text, opacity: 0.6, fontSize: 11 }}>Départ et arrivée masqués sur cette carte</Text>
+      <Text style={{ color: theme.text, fontSize: 11 }}>Départ et arrivée masqués sur cette carte</Text>
     </View>
     {error ? <Text style={{ color: palette.error }}>{error}</Text> : null}
     <Button label={busy ? 'PRÉPARATION…' : 'PARTAGER L’IMAGE'} disabled={busy} onPress={share} />

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import MapView from 'react-native-maps';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { Page } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -21,7 +22,7 @@ export default function Run() {
   const [gps, setGps] = useState('Recherche de ta position…');
   const [mapCenter, setMapCenter] = useState<MapCenter | null>(null);
   const [locationAllowed, setLocationAllowed] = useState(false);
-  const { active, busy, error, start } = useRunStore();
+  const { active, busy, error } = useRunStore();
   useEffect(() => {
     let alive = true;
     async function locate() {
@@ -58,7 +59,7 @@ export default function Run() {
   async function beginRun() {
     if (active) { router.push('/run/active'); return; }
     if (!session?.user.id) return;
-    if (await start(session.user.id, type, autoPause)) router.push('/run/active');
+    router.push({ pathname: '/run/countdown', params: { type, autoPause: autoPause ? '1' : '0' } });
   }
   return <Page scroll={false}>
     <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 18, gap: 18 }}>
@@ -70,29 +71,31 @@ export default function Run() {
         {choices.map((choice) => <Pressable key={choice.value} accessibilityRole="button"
           accessibilityState={{ selected: type === choice.value }} onPress={() => setType(choice.value)}
           style={({ pressed }) => ({ flex: 1, alignItems: 'center', paddingVertical: 12,
-            borderRadius: 18, backgroundColor: type === choice.value ? palette.accent : palette.surface,
-            opacity: pressed ? 0.8 : 1 })}>
+            borderRadius: 18, borderWidth: 1, borderColor: palette.line,
+            backgroundColor: type === choice.value ? palette.accent : palette.surface,
+            transform: [{ scale: pressed ? 0.98 : 1 }] })}>
           <Text style={{ color: type === choice.value ? palette.accentText : palette.text,
             fontSize: 12, fontWeight: '900', letterSpacing: 0.5 }}>{choice.label}</Text>
         </Pressable>)}
       </View>
     </View>
 
-    <View style={{ flex: 1, backgroundColor: '#DFE8DD', overflow: 'hidden' }}>
+    <View style={{ flex: 1, backgroundColor: palette.bg, overflow: 'hidden' }}>
       {mapCenter ? <MapView style={{ flex: 1 }}
         region={{ ...mapCenter, latitudeDelta: 0.008, longitudeDelta: 0.008 }}
         showsUserLocation={locationAllowed} showsMyLocationButton={false}
         scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} />
         : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 35 }}>
-          <Text style={{ color: '#496052', fontSize: 42 }}>◎</Text>
-          <Text style={{ color: '#304439', textAlign: 'center', fontWeight: '800' }}>
+          <Text style={{ color: palette.text, fontSize: 42 }}>◎</Text>
+          <Text style={{ color: palette.text, textAlign: 'center', fontWeight: '800' }}>
             La carte apparaîtra dès que ta position sera disponible.
           </Text>
         </View>}
 
       <View style={{ position: 'absolute', top: 18, left: 20, right: 20,
         paddingHorizontal: 16, paddingVertical: 13, borderRadius: 20,
-        backgroundColor: palette.surface, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line,
+        flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ color: palette.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.5 }}>●  SIGNAL GPS</Text>
           <Text style={{ color: palette.text, fontSize: 13, fontWeight: '800' }}>{gps}</Text>
@@ -101,7 +104,8 @@ export default function Run() {
         </View>
         <View style={{ alignItems: 'center', gap: 2 }}>
           <Switch accessibilityLabel="Pause automatique" value={autoPause} onValueChange={setAutoPause}
-            trackColor={{ true: palette.accent }} />
+            trackColor={{ false: palette.bg, true: palette.accent }}
+            thumbColor={autoPause ? palette.bg : palette.accent} />
           <Text style={{ color: palette.muted, fontSize: 9, fontWeight: '800' }}>PAUSE AUTO</Text>
         </View>
       </View>
@@ -111,16 +115,19 @@ export default function Run() {
         <Pressable accessibilityRole="button" accessibilityLabel={active ? 'Voir la course en cours' : 'Démarrer la course'}
           disabled={busy} onPress={() => void beginRun()}
           style={({ pressed }) => ({ width: 128, height: 128, borderRadius: 64,
-            backgroundColor: '#FF9D3D', alignItems: 'center', justifyContent: 'center',
-            borderWidth: 6, borderColor: '#FFE0BA', opacity: busy ? 0.6 : pressed ? 0.85 : 1 })}>
-          <Text style={{ color: '#211910', fontSize: active ? 18 : 25, fontWeight: '900', letterSpacing: -0.4 }}>
+            backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center',
+            borderWidth: 6, borderColor: palette.bg,
+            transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
+          <Text style={{ color: palette.accentText, fontSize: active ? 18 : 25, fontWeight: '900', letterSpacing: -0.4 }}>
             {active ? 'VOIR RUN' : busy ? 'GPS…' : 'START'}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/goals')}
-          style={({ pressed }) => ({ borderRadius: 22, backgroundColor: '#FFFFFF',
-            paddingHorizontal: 22, paddingVertical: 11, opacity: pressed ? 0.8 : 1 })}>
-          <Text style={{ color: '#1B261F', fontWeight: '900', fontSize: 12 }}>DÉFINIR UN OBJECTIF</Text>
+          style={({ pressed }) => ({ borderRadius: 22, backgroundColor: palette.bg,
+            borderWidth: 1, borderColor: palette.line,
+            paddingHorizontal: 22, paddingVertical: 11,
+            transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+          <Text style={{ color: palette.text, fontWeight: '900', fontSize: 12 }}>DÉFINIR UN OBJECTIF</Text>
         </Pressable>
       </View>
     </View>

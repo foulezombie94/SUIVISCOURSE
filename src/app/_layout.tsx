@@ -1,6 +1,7 @@
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import { AuthProvider } from '@/features/auth/auth-provider';
 import { palette } from '@/constants/palette';
 
@@ -11,6 +12,14 @@ const appTheme = { ...DarkTheme, colors: { ...DarkTheme.colors,
   background: palette.bg, card: palette.surface, text: palette.text,
   primary: palette.accent, border: palette.line } };
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'Geist-Regular': require('../../assets/fonts/Geist-Regular.ttf'),
+    'Geist-Medium': require('../../assets/fonts/Geist-Medium.ttf'),
+    'Geist-Bold': require('../../assets/fonts/Geist-Bold.ttf'),
+    'GeistMono-Regular': require('../../assets/fonts/GeistMono-Regular.ttf'),
+    'GeistMono-Bold': require('../../assets/fonts/GeistMono-Bold.ttf'),
+  });
+  if (!fontsLoaded && !fontError) return null;
   return <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ThemeProvider value={appTheme}>
@@ -19,6 +28,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="run/countdown" options={{ gestureEnabled: false }} />
         <Stack.Screen name="run/active" options={{ gestureEnabled: false }} />
         <Stack.Screen name="run/summary" />
         <Stack.Screen name="activity/[id]" />

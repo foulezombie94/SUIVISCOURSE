@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, router } from 'expo-router';
-import { Text } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Eyebrow, Field, Page, Title } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { supabase } from '@/services/supabase';

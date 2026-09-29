@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Text } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Panel } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import type { FeedItem } from '@/services/feed';

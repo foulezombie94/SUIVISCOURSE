@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Eyebrow, Field, Page, Panel, Title } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';

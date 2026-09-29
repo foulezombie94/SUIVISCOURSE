@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { ActivityTile } from '@/components/activity-tile';
 import { FriendActivityTile } from '@/components/friend-activity-tile';
 import { Button, Empty, Eyebrow, Page, Panel, Title } from '@/components/ui';

@@ -3,18 +3,20 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { DynamicColorIOS, Platform } from 'react-native';
 import { useAuth } from '@/features/auth/auth-provider';
 import { palette } from '@/constants/palette';
+import { fonts } from '@/constants/typography';
 
 const normalColor = Platform.OS === 'ios'
-  ? DynamicColorIOS({ dark: palette.muted, light: '#46554A' }) : palette.muted;
+  ? DynamicColorIOS({ dark: palette.text, light: palette.text }) : palette.text;
 const activeColor = Platform.OS === 'ios'
-  ? DynamicColorIOS({ dark: palette.accent, light: '#355B0D' }) : palette.accent;
+  ? DynamicColorIOS({ dark: palette.accent, light: palette.accent }) : palette.accent;
 
 export default function TabLayout() {
   const { session, ready } = useAuth();
   if (ready && !session) return <Redirect href="/(auth)/login" />;
   return <NativeTabs backgroundColor={palette.surface} tintColor={activeColor}
     iconColor={{ default: normalColor, selected: activeColor }}
-    labelStyle={{ default: { color: normalColor }, selected: { color: activeColor } }}>
+    labelStyle={{ default: { color: normalColor, fontFamily: fonts.regular },
+      selected: { color: activeColor, fontFamily: fonts.bold } }}>
     <NativeTabs.Trigger name="index">
       <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
       <NativeTabs.Trigger.Label>Accueil</NativeTabs.Trigger.Label>

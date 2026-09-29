@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Text } from 'react-native';
+import { Text } from '@/components/typography';
 import { Empty, Eyebrow, Page, Panel, Title } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { profilesByIds } from '@/services/friends';

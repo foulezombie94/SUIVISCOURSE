@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Empty, Eyebrow, Page, Panel, Title } from '@/components/ui';
 import { RouteMap } from '@/components/route-map';
 import { palette } from '@/constants/palette';

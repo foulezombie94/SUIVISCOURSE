@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/components/typography';
 import { Button, Eyebrow, Page } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';
