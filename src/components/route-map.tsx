@@ -4,8 +4,8 @@ import type { Point } from '@/types/domain';
 import { palette } from '@/constants/palette';
 
 export const RouteMap = memo(function RouteMap({ points, height = 230,
-  refreshToken, followCurrent = false }: {
-    points: Point[]; height?: number; refreshToken?: number; followCurrent?: boolean;
+  refreshToken, followCurrent = false, fill = false }: {
+    points: Point[]; height?: number; refreshToken?: number; followCurrent?: boolean; fill?: boolean;
   }) {
   void refreshToken;
   if (!points.length) return null;
@@ -25,7 +25,7 @@ export const RouteMap = memo(function RouteMap({ points, height = 230,
   const sampled = visiblePoints.filter((_, index) => index % stride === 0 || index === visiblePoints.length - 1);
   const coords = sampled.map((point) => ({ latitude: point.latitude, longitude: point.longitude }));
   return <MapView
-    style={{ height, width: '100%', borderRadius: 20 }}
+    style={[fill ? { flex: 1, width: '100%' } : { height, width: '100%', borderRadius: 20 }]}
     region={{
       latitude: (minLat + maxLat) / 2, longitude: (minLon + maxLon) / 2,
       latitudeDelta: followCurrent ? 0.008 : Math.max(0.008, (maxLat - minLat) * 1.5),
