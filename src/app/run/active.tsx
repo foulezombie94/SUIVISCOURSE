@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, View, useWindowDimensions } from 'react-native';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteMap } from '@/components/route-map';
@@ -13,10 +13,10 @@ const ink = '#000000';
 const paper = '#FFFFFF';
 const electricBlue = '#00C8FF';
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return <View style={{ flex: 1, minWidth: 0, minHeight: 80, borderWidth: 1, borderColor: ink,
-    borderRadius: 14, paddingVertical: 11, paddingHorizontal: 8, gap: 5,
-    backgroundColor: paper }}>
+function Metric({ label, value, height }: { label: string; value: string; height: number }) {
+  return <View style={{ flex: 1, minWidth: 0, height, borderWidth: 1, borderColor: ink,
+    borderRadius: 16, paddingVertical: 12, paddingHorizontal: 12,
+    justifyContent: 'space-between', backgroundColor: paper }}>
     <Text numberOfLines={1} style={{ color: ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
       style={{ color: ink, fontSize: 20, fontFamily: fonts.monoBold }}>{value}</Text>
@@ -24,6 +24,8 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 export default function ActiveRun() {
+  const { width } = useWindowDimensions();
+  const cardHeight = Math.round(Math.min(112, Math.max(82, ((width - 28 - 9) / 2) * 0.62)));
   const [mapRefresh, setMapRefresh] = useState(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
   useEffect(() => {
@@ -67,16 +69,16 @@ export default function ActiveRun() {
 
     <View style={{ position: 'absolute', left: 14, right: 14, bottom: 12, gap: 9 }}>
       <View style={{ flexDirection: 'row', gap: 9 }}>
-        <Metric label="TEMPS" value={formatDuration(active.elapsedSeconds)} />
-        <Metric label="VITESSE" value={`${speed.toFixed(0)} KM/H`} />
+        <Metric label="TEMPS" value={formatDuration(active.elapsedSeconds)} height={cardHeight} />
+        <Metric label="VITESSE" value={`${speed.toFixed(0)} KM/H`} height={cardHeight} />
       </View>
       <View style={{ flexDirection: 'row', gap: 9 }}>
         <Metric label="DISTANCE" value={active.distanceMeters < 1000
-          ? `${Math.round(active.distanceMeters)} M` : `${formatKm(active.distanceMeters)} KM`} />
+          ? `${Math.round(active.distanceMeters)} M` : `${formatKm(active.distanceMeters)} KM`} height={cardHeight} />
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
-          style={({ pressed }) => ({ flex: 1, minHeight: 80, borderWidth: 1, borderColor: ink,
-            borderRadius: 14, backgroundColor: electricBlue, alignItems: 'center', justifyContent: 'center',
+          style={({ pressed }) => ({ flex: 1, height: cardHeight, borderWidth: 1, borderColor: ink,
+            borderRadius: 16, backgroundColor: electricBlue, alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.98 : 1 }] })}>
           <Text style={{ color: ink, fontSize: 17, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
         </Pressable>
