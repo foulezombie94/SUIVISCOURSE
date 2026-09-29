@@ -33,8 +33,7 @@ export const RouteMap = memo(function RouteMap({ points, height = 230,
   return <MapView
     style={[fill ? { flex: 1, width: '100%' } : { height, width: '100%', borderRadius: 20 }]}
     {...(interactive ? { initialRegion: region } : { region })}
-    scrollEnabled={interactive} zoomEnabled={interactive} pitchEnabled={false} rotateEnabled={false}
-    showsPointsOfInterests={false}>
+    scrollEnabled={interactive} zoomEnabled={interactive} pitchEnabled={false} rotateEnabled={false}>
     {coords.length >= 2 ? <Polyline coordinates={coords} strokeColor={palette.accent} strokeWidth={5} /> : null}
     <Marker coordinate={coords[0]} pinColor={palette.cyan} title={followCurrent ? 'Parcours' : 'Départ'} />
     {coords.length >= 2 ? <Marker coordinate={coords[coords.length - 1]}
