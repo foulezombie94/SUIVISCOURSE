@@ -2,40 +2,21 @@ import { useEffect, useState } from 'react';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Alert, Pressable, View, useWindowDimensions } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteMap } from '@/components/route-map';
 import { getTrackPoints, useRunStore } from '@/store/run-store';
-import { formatDuration, formatKm } from '@/utils/format';
+import { formatDuration, formatKm, formatPace } from '@/utils/format';
 import { fonts } from '@/constants/typography';
 
-const ink = '#000000';
+const ink = '#080808';
 const paper = '#FFFFFF';
-const charcoal = '#3D414A';
-const distancePaper = '#EEEEEE';
-const stopLime = '#DDE872';
-const tileFrame = (height: number) => ({
-  flex: 1 as const, minWidth: 0, height, borderRadius: 18,
-});
-
-function Metric({ label, value, unit, height, tone = 'dark' }: {
-  label: string; value: string; unit: string; height: number; tone?: 'dark' | 'light';
-}) {
-  const backgroundColor = tone === 'dark' ? charcoal : distancePaper;
-  const textColor = tone === 'dark' ? paper : ink;
-  return <View style={{ ...tileFrame(height),
-    paddingVertical: 15, paddingHorizontal: 14, justifyContent: 'space-between', backgroundColor }}>
-    <Text numberOfLines={1} style={{ color: textColor, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{label}</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
-      style={{ color: textColor, fontSize: 28, fontFamily: fonts.monoBold }}>{value}</Text>
-    <Text numberOfLines={1} style={{ color: textColor, fontSize: 10, fontWeight: '800' }}>{unit}</Text>
-  </View>;
-}
+const accent = '#FF493D';
+const ringTrack = '#3B3B3B';
 
 export default function ActiveRun() {
-  const { width } = useWindowDimensions();
-  const cardWidth = (width - 28 - 9) / 2;
-  const cardHeight = Math.round(Math.min(156, Math.max(100, cardWidth * 0.84)));
+  const { width, height } = useWindowDimensions();
   const [mapRefresh, setMapRefresh] = useState(0);
   const { active, pause, resume, finish, busy, error } = useRunStore();
   useEffect(() => {
@@ -44,6 +25,14 @@ export default function ActiveRun() {
   }, []);
   if (!active) return <Redirect href="/(tabs)/run" />;
 
+  const mapHeight = Math.round(Math.min(height * 0.4, 360));
+  const ringSize = Math.round(Math.min(width * 0.67, 270));
+  const center = ringSize / 2;
+  const radius = center - 13;
+  const circumference = 2 * Math.PI * radius;
+  const lapProgress = Math.max(0.002, (active.distanceMeters % 1000) / 1000);
+  const pace = active.distanceMeters >= 100
+    ? active.movingSeconds / (active.distanceMeters / 1000) : null;
   const speed = active.movingSeconds > 0
     ? active.distanceMeters / active.movingSeconds * 3.6 : 0;
   const trackPoints = getTrackPoints();
@@ -55,47 +44,79 @@ export default function ActiveRun() {
 
   return <SafeAreaView style={{ flex: 1, backgroundColor: ink }} edges={['top', 'bottom']}>
     <StatusBar style="light" />
-    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: ink }}>
+    <View style={{ height: mapHeight, backgroundColor: ink }}>
       {trackPoints.length > 0
-        ? <RouteMap points={trackPoints} refreshToken={mapRefresh} followCurrent fill interactive />
+        ? <RouteMap points={trackPoints} height={mapHeight} refreshToken={mapRefresh} followCurrent fill interactive />
         : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <Text style={{ color: paper, fontSize: 38 }}>◎</Text>
           <Text style={{ color: paper, fontWeight: '800' }}>Recherche du tracé GPS…</Text>
         </View>}
-      <View style={{ position: 'absolute', top: 10, right: 16 }}>
+    </View>
+
+    <View style={{ flex: 1, backgroundColor: ink, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+      marginTop: -18, alignItems: 'center', paddingHorizontal: 24, paddingTop: 14,
+      paddingBottom: 12, gap: 8 }}>
+      <Text style={{ color: paper, fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>
+        {active.state === 'autoPaused' ? 'PAUSE AUTO' : active.state === 'paused' ? 'EN PAUSE' : 'TEMPS ÉCOULÉ'}
+      </Text>
+      <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}
+          style={{ position: 'absolute' }}>
+          <Circle cx={center} cy={center} r={radius} fill="none" stroke={ringTrack}
+            strokeWidth={8} strokeDasharray="4 8" />
+          <Circle cx={center} cy={center} r={radius} fill="none" stroke={accent}
+            strokeWidth={8} strokeLinecap="round" strokeDasharray={`${circumference * lapProgress} ${circumference}`} />
+        </Svg>
+        <View style={{ alignItems: 'center', gap: 5 }}>
+          <Text style={{ color: paper, fontSize: 38, fontFamily: fonts.monoBold }}>
+            {formatDuration(active.elapsedSeconds)}
+          </Text>
+          <Text style={{ color: paper, fontSize: 10, fontWeight: '900', letterSpacing: 1.8 }}>TEMPS</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, marginTop: 8 }}>
+            <Text style={{ color: paper, fontSize: 23, fontFamily: fonts.monoBold }}>
+              {active.distanceMeters < 1000
+                ? `${Math.round(active.distanceMeters)}` : formatKm(active.distanceMeters)}
+            </Text>
+            <Text style={{ color: paper, fontSize: 10, fontWeight: '900' }}>
+              {active.distanceMeters < 1000 ? 'M' : 'KM'}
+            </Text>
+          </View>
+          <Text style={{ color: paper, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 }}>DISTANCE</Text>
+        </View>
+      </View>
+
+      <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
         <Pressable accessibilityRole="button"
-          accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre la course'}
+          accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre'}
           disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
-          style={({ pressed }) => ({ width: 44, height: 44, backgroundColor: paper,
-            borderRadius: 22, borderWidth: 1, borderColor: ink,
+          style={({ pressed }) => ({ width: 54, height: 54, borderRadius: 27,
+            backgroundColor: '#242424', borderWidth: 1, borderColor: '#585858',
             alignItems: 'center', justifyContent: 'center',
             transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
-          <Text style={{ color: ink, fontSize: 19, fontWeight: '900' }}>
+          <Text style={{ color: paper, fontSize: 19, fontWeight: '900' }}>
             {active.state === 'running' ? 'Ⅱ' : '▶'}
           </Text>
         </Pressable>
-      </View>
-    </View>
-
-    <View style={{ position: 'absolute', left: 14, right: 14, bottom: 12, gap: 9 }}>
-      <View style={{ flexDirection: 'row', gap: 9 }}>
-        <Metric label="TEMPS" value={formatDuration(active.elapsedSeconds)} unit="MIN" height={cardHeight} />
-        <Metric label="VITESSE" value={speed.toFixed(0)} unit="KM/H" height={cardHeight} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 9 }}>
-        <Metric label="DISTANCE" value={active.distanceMeters < 1000
-          ? `${Math.round(active.distanceMeters)}` : formatKm(active.distanceMeters)}
-          unit={active.distanceMeters < 1000 ? 'M' : 'KM'} height={cardHeight} tone="light" />
+        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-around', gap: 8 }}>
+          <View style={{ gap: 4, alignItems: 'center' }}>
+            <Text style={{ color: paper, fontSize: 10, fontWeight: '800' }}>ALLURE</Text>
+            <Text style={{ color: paper, fontSize: 15, fontFamily: fonts.monoBold }}>{formatPace(pace)}</Text>
+          </View>
+          <View style={{ width: 1, backgroundColor: ringTrack }} />
+          <View style={{ gap: 4, alignItems: 'center' }}>
+            <Text style={{ color: paper, fontSize: 10, fontWeight: '800' }}>VITESSE</Text>
+            <Text style={{ color: paper, fontSize: 15, fontFamily: fonts.monoBold }}>{speed.toFixed(1)} KM/H</Text>
+          </View>
+        </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Terminer la course"
           disabled={busy} onPress={finishRun}
-          style={({ pressed }) => ({ ...tileFrame(cardHeight),
-            backgroundColor: stopLime, alignItems: 'center', justifyContent: 'center',
-            transform: [{ scale: pressed && !busy ? 0.98 : 1 }] })}>
-          <Text style={{ color: ink, fontSize: 21, fontWeight: '900', letterSpacing: 1.2 }}>STOP ■</Text>
+          style={({ pressed }) => ({ width: 54, height: 54, borderRadius: 16,
+            backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
+            transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
+          <View style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: paper }} />
         </Pressable>
       </View>
-      {error ? <Text style={{ color: paper, backgroundColor: ink, padding: 8,
-        fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
+      {error ? <Text style={{ alignSelf: 'stretch', color: paper, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>{error}</Text> : null}
     </View>
   </SafeAreaView>;
 }
