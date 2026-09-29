@@ -1,64 +1,128 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
+import MapView from 'react-native-maps';
 import { Pressable, Switch, Text, View } from 'react-native';
-import { Button, Eyebrow, Page, Panel, Title } from '@/components/ui';
+import { Page } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useRunStore } from '@/store/run-store';
 import type { ActivityType } from '@/types/domain';
 
 const choices: { value: ActivityType; label: string }[] = [
-  { value: 'running', label: 'RUNNING' }, { value: 'walking', label: 'MARCHE' },
+  { value: 'running', label: 'COURSE' }, { value: 'walking', label: 'MARCHE' },
   { value: 'trail', label: 'TRAIL' },
 ];
+type MapCenter = { latitude: number; longitude: number };
 export default function Run() {
   const { session } = useAuth();
   const [type, setType] = useState<ActivityType>('running');
   const [autoPause, setAutoPause] = useState(true);
-  const [gps, setGps] = useState('Vérification du GPS…');
+  const [gps, setGps] = useState('Recherche de ta position…');
+  const [mapCenter, setMapCenter] = useState<MapCenter | null>(null);
+  const [locationAllowed, setLocationAllowed] = useState(false);
   const { active, busy, error, start } = useRunStore();
   useEffect(() => {
     let alive = true;
-    void Promise.all([Location.hasServicesEnabledAsync(), Location.getForegroundPermissionsAsync()])
-      .then(async ([enabled, permission]) => {
-        if (!alive) return;
-        if (!enabled) setGps('Localisation désactivée');
-        else if (!permission.granted) setGps('Autorisation demandée au départ');
-        else {
-          const known = await Location.getLastKnownPositionAsync();
-          if (alive) setGps(known?.coords.accuracy != null
-            ? `GPS ± ${Math.round(known.coords.accuracy)} m` : 'GPS disponible');
+    async function locate() {
+      try {
+        if (!await Location.hasServicesEnabledAsync()) {
+          if (alive) setGps('Active la localisation pour voir la carte');
+          return;
         }
-      }).catch(() => { if (alive) setGps('GPS indisponible'); });
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (!alive) return;
+        if (!permission.granted) {
+          setGps('Autorise la localisation pour voir la carte');
+          return;
+        }
+        setLocationAllowed(true);
+        const known = await Location.getLastKnownPositionAsync({ maxAge: 60_000, requiredAccuracy: 100 });
+        if (alive && known) {
+          setMapCenter({ latitude: known.coords.latitude, longitude: known.coords.longitude });
+          setGps('Recherche du signal GPS précis…');
+        }
+        const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        if (alive) {
+          setMapCenter({ latitude: current.coords.latitude, longitude: current.coords.longitude });
+          setGps(current.coords.accuracy == null
+            ? 'Position GPS disponible' : `GPS ± ${Math.round(current.coords.accuracy)} m`);
+        }
+      } catch {
+        if (alive) setGps('Position indisponible, réessaie à l’extérieur');
+      }
+    }
+    void locate();
     return () => { alive = false; };
   }, []);
-  return <Page><Eyebrow>LE POINT DE DÉPART</Eyebrow><Title>Prêt à bouger ?</Title>
-    <Panel style={{ paddingVertical: 30, alignItems: 'center', gap: 8 }}>
-      <Text style={{ color: palette.accent, fontSize: 13, fontWeight: '900', letterSpacing: 2 }}>GPS ●</Text>
-      <Text style={{ color: palette.text, fontSize: 21, fontWeight: '800' }}>{gps}</Text>
-      <Text style={{ color: palette.muted, textAlign: 'center', lineHeight: 21 }}>Le suivi GPS fonctionne dans Expo Go tant que l’app reste ouverte à l’écran.</Text>
-    </Panel>
-    <Eyebrow>ACTIVITÉ</Eyebrow>
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {choices.map((choice) => <Pressable key={choice.value} onPress={() => setType(choice.value)}
-        style={{ flex: 1, paddingVertical: 17, alignItems: 'center', borderRadius: 16,
-          backgroundColor: type === choice.value ? palette.accent : palette.surface }}>
-        <Text style={{ color: type === choice.value ? palette.accentText : palette.text,
-          fontSize: 12, fontWeight: '900' }}>{choice.label}</Text>
-      </Pressable>)}
+  async function beginRun() {
+    if (active) { router.push('/run/active'); return; }
+    if (!session?.user.id) return;
+    if (await start(session.user.id, type, autoPause)) router.push('/run/active');
+  }
+  return <Page scroll={false}>
+    <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 18, gap: 18 }}>
+      <View style={{ gap: 2 }}>
+        <Text style={{ color: palette.accent, fontSize: 11, fontWeight: '900', letterSpacing: 2.5 }}>ÉLAN / BOUGER</Text>
+        <Text style={{ color: palette.text, fontSize: 37, fontWeight: '900', letterSpacing: -1.5 }}>Run.</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {choices.map((choice) => <Pressable key={choice.value} accessibilityRole="button"
+          accessibilityState={{ selected: type === choice.value }} onPress={() => setType(choice.value)}
+          style={({ pressed }) => ({ flex: 1, alignItems: 'center', paddingVertical: 12,
+            borderRadius: 18, backgroundColor: type === choice.value ? palette.accent : palette.surface,
+            opacity: pressed ? 0.8 : 1 })}>
+          <Text style={{ color: type === choice.value ? palette.accentText : palette.text,
+            fontSize: 12, fontWeight: '900', letterSpacing: 0.5 }}>{choice.label}</Text>
+        </Pressable>)}
+      </View>
     </View>
-    <Panel style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <View><Text style={{ color: palette.text, fontWeight: '800' }}>Pause automatique</Text>
-        <Text style={{ color: palette.muted, fontSize: 12 }}>Quand tu t’arrêtes vraiment</Text></View>
-      <Switch value={autoPause} onValueChange={setAutoPause} trackColor={{ true: palette.accent }} />
-    </Panel>
-    {error ? <Text style={{ color: palette.error }}>{error}</Text> : null}
-    <Button label={active ? 'REPRENDRE LA COURSE' : busy ? 'PRÉPARATION DU GPS…' : 'DÉMARRER'}
-      disabled={busy} onPress={async () => {
-        if (active) { router.push('/run/active'); return; }
-        if (!session?.user.id) return;
-        if (await start(session.user.id, type, autoPause)) router.push('/run/active');
-      }} />
+
+    <View style={{ flex: 1, backgroundColor: '#DFE8DD', overflow: 'hidden' }}>
+      {mapCenter ? <MapView style={{ flex: 1 }}
+        region={{ ...mapCenter, latitudeDelta: 0.008, longitudeDelta: 0.008 }}
+        showsUserLocation={locationAllowed} showsMyLocationButton={false}
+        scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} />
+        : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 35 }}>
+          <Text style={{ color: '#496052', fontSize: 42 }}>◎</Text>
+          <Text style={{ color: '#304439', textAlign: 'center', fontWeight: '800' }}>
+            La carte apparaîtra dès que ta position sera disponible.
+          </Text>
+        </View>}
+
+      <View style={{ position: 'absolute', top: 18, left: 20, right: 20,
+        paddingHorizontal: 16, paddingVertical: 13, borderRadius: 20,
+        backgroundColor: palette.surface, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ color: palette.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.5 }}>●  SIGNAL GPS</Text>
+          <Text style={{ color: palette.text, fontSize: 13, fontWeight: '800' }}>{gps}</Text>
+          <Text style={{ color: palette.muted, fontSize: 10 }}>Suivi pendant que l’app reste ouverte à l’écran</Text>
+          {error ? <Text style={{ color: palette.error, fontSize: 11, fontWeight: '700' }}>{error}</Text> : null}
+        </View>
+        <View style={{ alignItems: 'center', gap: 2 }}>
+          <Switch accessibilityLabel="Pause automatique" value={autoPause} onValueChange={setAutoPause}
+            trackColor={{ true: palette.accent }} />
+          <Text style={{ color: palette.muted, fontSize: 9, fontWeight: '800' }}>PAUSE AUTO</Text>
+        </View>
+      </View>
+
+      <View style={{ position: 'absolute', bottom: 28, left: 0, right: 0,
+        alignItems: 'center', gap: 12 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={active ? 'Voir la course en cours' : 'Démarrer la course'}
+          disabled={busy} onPress={() => void beginRun()}
+          style={({ pressed }) => ({ width: 128, height: 128, borderRadius: 64,
+            backgroundColor: '#FF9D3D', alignItems: 'center', justifyContent: 'center',
+            borderWidth: 6, borderColor: '#FFE0BA', opacity: busy ? 0.6 : pressed ? 0.85 : 1 })}>
+          <Text style={{ color: '#211910', fontSize: active ? 18 : 25, fontWeight: '900', letterSpacing: -0.4 }}>
+            {active ? 'VOIR RUN' : busy ? 'GPS…' : 'START'}
+          </Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/goals')}
+          style={({ pressed }) => ({ borderRadius: 22, backgroundColor: '#FFFFFF',
+            paddingHorizontal: 22, paddingVertical: 11, opacity: pressed ? 0.8 : 1 })}>
+          <Text style={{ color: '#1B261F', fontWeight: '900', fontSize: 12 }}>DÉFINIR UN OBJECTIF</Text>
+        </Pressable>
+      </View>
+    </View>
   </Page>;
 }
