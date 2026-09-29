@@ -8,16 +8,9 @@ import { Page } from '@/components/ui';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useRunStore } from '@/store/run-store';
-import type { ActivityType } from '@/types/domain';
-
-const choices: { value: ActivityType; label: string }[] = [
-  { value: 'running', label: 'COURSE' }, { value: 'walking', label: 'MARCHE' },
-  { value: 'trail', label: 'TRAIL' },
-];
 type MapCenter = { latitude: number; longitude: number };
 export default function Run() {
   const { session } = useAuth();
-  const [type, setType] = useState<ActivityType>('running');
   const [autoPause, setAutoPause] = useState(true);
   const [gps, setGps] = useState('Recherche de ta position…');
   const [mapCenter, setMapCenter] = useState<MapCenter | null>(null);
@@ -59,24 +52,13 @@ export default function Run() {
   async function beginRun() {
     if (active) { router.push('/run/active'); return; }
     if (!session?.user.id) return;
-    router.push({ pathname: '/run/countdown', params: { type, autoPause: autoPause ? '1' : '0' } });
+    router.push({ pathname: '/run/countdown', params: { type: 'running', autoPause: autoPause ? '1' : '0' } });
   }
   return <Page scroll={false}>
     <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 18, gap: 18 }}>
       <View style={{ gap: 2 }}>
         <Text style={{ color: palette.accent, fontSize: 11, fontWeight: '900', letterSpacing: 2.5 }}>ÉLAN / BOUGER</Text>
         <Text style={{ color: palette.text, fontSize: 37, fontWeight: '900', letterSpacing: -1.5 }}>Run.</Text>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {choices.map((choice) => <Pressable key={choice.value} accessibilityRole="button"
-          accessibilityState={{ selected: type === choice.value }} onPress={() => setType(choice.value)}
-          style={({ pressed }) => ({ flex: 1, alignItems: 'center', paddingVertical: 12,
-            borderRadius: 18, borderWidth: 1, borderColor: palette.line,
-            backgroundColor: type === choice.value ? palette.accent : palette.surface,
-            transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-          <Text style={{ color: type === choice.value ? palette.accentText : palette.text,
-            fontSize: 12, fontWeight: '900', letterSpacing: 0.5 }}>{choice.label}</Text>
-        </Pressable>)}
       </View>
     </View>
 
