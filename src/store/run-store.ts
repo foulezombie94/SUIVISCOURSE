@@ -93,7 +93,8 @@ export const useRunStore = create<RunState>((set, get) => ({
     if (!saved) return false;
     const { points, ...summary } = saved;
     trackBuffer = points ?? [];
-    set({ active: { ...summary, state: 'paused', lastTickAt: Date.now() },
+    const now = Date.now();
+    set({ active: { ...summary, state: 'paused', lastTickAt: now, pausedAt: now },
       routeVersion: trackBuffer.length });
     return true;
   },
@@ -117,6 +118,7 @@ export const useRunStore = create<RunState>((set, get) => ({
         elevationGainMeters: 0, elevationLossMeters: 0,
         splits: [], state: 'running', autoPause, stationarySeconds: 0,
         recoverySeconds: 0, lastSplitMovingSeconds: 0, discardNextLocation: false,
+        pausedDurationSeconds: 0, pausedAt: null,
       };
       await persist(value);
       set({ active: value, routeVersion: trackBuffer.length });
@@ -134,7 +136,8 @@ export const useRunStore = create<RunState>((set, get) => ({
     const active = get().active;
     if (!active) return;
     stopWatch();
-    const next: ActiveActivity = { ...tick(active, Date.now()), state: 'paused' };
+    const now = Date.now();
+    const next: ActiveActivity = { ...tick(active, now), state: 'paused', pausedAt: now };
     set({ active: next });
     try {
       await persist(next);
@@ -147,8 +150,12 @@ export const useRunStore = create<RunState>((set, get) => ({
     const active = get().active;
     if (!active) return;
     try {
+      const now = Date.now();
+      const pauseDuration = active.pausedAt == null ? 0 : Math.max(0, (now - active.pausedAt) / 1000);
       const next: ActiveActivity = {
-        ...active, state: 'running', lastTickAt: Date.now(),
+        ...active, state: 'running', lastTickAt: now,
+        pausedDurationSeconds: (active.pausedDurationSeconds ?? 0) + pauseDuration,
+        pausedAt: null,
         stationarySeconds: 0, recoverySeconds: 0, discardNextLocation: true,
       };
       await persist(next);
@@ -197,7 +204,8 @@ AppState.addEventListener('change', (state) => {
   const active = useRunStore.getState().active;
   if (!active || active.state === 'paused') return;
   stopWatch();
-  const paused: ActiveActivity = { ...tick(active, Date.now()), state: 'paused' };
+  const now = Date.now();
+  const paused: ActiveActivity = { ...tick(active, now), state: 'paused', pausedAt: now };
   useRunStore.setState({ active: paused });
   void persist(paused).catch(() => useRunStore.setState({
     error: 'La pause n’a pas pu être sauvegardée. Vérifie l’espace disponible.',

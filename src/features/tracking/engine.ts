@@ -29,8 +29,11 @@ export function averagePace(value: Pick<ActiveActivity, 'movingSeconds' | 'dista
   return value.distanceMeters >= 100 ? value.movingSeconds / (value.distanceMeters / 1000) : null;
 }
 export function tick(activity: ActiveActivity, now: number): ActiveActivity {
-  return { ...activity, lastTickAt: now,
-    elapsedSeconds: Math.max(activity.elapsedSeconds, (now - activity.startedAt) / 1000) };
+  const elapsedSeconds = activity.state === 'paused'
+    ? activity.elapsedSeconds
+    : Math.max(activity.elapsedSeconds,
+      (now - activity.startedAt) / 1000 - (activity.pausedDurationSeconds ?? 0));
+  return { ...activity, lastTickAt: now, elapsedSeconds };
 }
 export function ingest(activity: ActiveActivity, point: Point, points: Point[]): ActiveActivity {
   if (activity.state === 'paused' || !Number.isFinite(point.latitude) || !Number.isFinite(point.longitude) ||
@@ -97,7 +100,10 @@ export function ingest(activity: ActiveActivity, point: Point, points: Point[]):
     const boundaryMovingSeconds = activity.movingSeconds + movementIntervalSeconds * fraction;
     splits.push({ kilometer: splits.length + 1,
       movingSeconds: Math.max(1, Math.round(boundaryMovingSeconds - lastSplitMovingSeconds)),
-      elapsedSeconds: Math.max(1, Math.round((activity.lastObservationAt + dt * 1000 * fraction - activity.startedAt) / 1000)) });
+      elapsedSeconds: Math.max(1, Math.round(
+        (activity.lastObservationAt + dt * 1000 * fraction - activity.startedAt) / 1000 -
+        (activity.pausedDurationSeconds ?? 0)
+      )) });
     lastSplitMovingSeconds = boundaryMovingSeconds;
   }
   points.push(point);
