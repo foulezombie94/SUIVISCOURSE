@@ -34,8 +34,6 @@ export default function ActiveRun() {
 
   const speed = active.movingSeconds > 0
     ? active.distanceMeters / active.movingSeconds * 3.6 : 0;
-  const stateLabel = active.state === 'autoPaused' ? 'PAUSE AUTO'
-    : active.state === 'paused' ? 'EN PAUSE' : 'EN COURS';
   const trackPoints = getTrackPoints();
   const finishRun = () => Alert.alert('Terminer la course ?', 'Le résumé sera sauvegardé sur ton téléphone.',
     [{ text: 'Continuer', style: 'cancel' }, { text: 'Terminer', onPress: async () => {
@@ -52,18 +50,17 @@ export default function ActiveRun() {
           <Text style={{ color: paper, fontSize: 38 }}>◎</Text>
           <Text style={{ color: paper, fontWeight: '800' }}>Recherche du tracé GPS…</Text>
         </View>}
-      <View style={{ position: 'absolute', top: 10, left: 16, right: 16,
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <View style={{ backgroundColor: ink, borderWidth: 1, borderColor: paper,
-          borderRadius: 15, paddingHorizontal: 14, paddingVertical: 9 }}>
-          <Text style={{ color: paper, fontSize: 12, fontWeight: '900', letterSpacing: 1.4 }}>ÉLAN / COURSE</Text>
-          <Text style={{ color: paper, fontSize: 10, fontWeight: '700' }}>TON PARCOURS EN DIRECT</Text>
-        </View>
+      <View style={{ position: 'absolute', top: 10, right: 16 }}>
         <Pressable accessibilityRole="button"
           accessibilityLabel={active.state === 'running' ? 'Mettre en pause' : 'Reprendre la course'}
           disabled={busy} onPress={() => active.state === 'running' ? void pause() : void resume()}
-          style={{ backgroundColor: paper, borderRadius: 15, paddingHorizontal: 12, paddingVertical: 8 }}>
-          <Text style={{ color: ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 }}>● {stateLabel}</Text>
+          style={({ pressed }) => ({ width: 44, height: 44, backgroundColor: paper,
+            borderRadius: 22, borderWidth: 1, borderColor: ink,
+            alignItems: 'center', justifyContent: 'center',
+            transform: [{ scale: pressed && !busy ? 0.96 : 1 }] })}>
+          <Text style={{ color: ink, fontSize: 19, fontWeight: '900' }}>
+            {active.state === 'running' ? 'Ⅱ' : '▶'}
+          </Text>
         </Pressable>
       </View>
     </View>
