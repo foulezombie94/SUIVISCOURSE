@@ -678,6 +678,42 @@ export type Database = {
         }
         Relationships: []
       }
+      runner_profiles: {
+        Row: {
+          user_id: string
+          age: number | null
+          weight_kg: number | null
+          height_cm: number | null
+          running_level: string | null
+          runs_per_week: number | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          age?: number | null
+          weight_kg?: number | null
+          height_cm?: number | null
+          running_level?: string | null
+          runs_per_week?: number | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          age?: number | null
+          weight_kg?: number | null
+          height_cm?: number | null
+          running_level?: string | null
+          runs_per_week?: number | null
+          updated_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "runner_profiles_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: true
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }]
+      }
       run_battles: {
         Row: {
           created_at: string

@@ -1,6 +1,7 @@
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '@/features/auth/auth-provider';
 import { palette } from '@/constants/palette';
 
@@ -11,7 +12,7 @@ const appTheme = { ...DarkTheme, colors: { ...DarkTheme.colors,
   background: palette.bg, card: palette.surface, text: palette.text,
   primary: palette.accent, border: palette.line } };
 export default function RootLayout() {
-  return <QueryClientProvider client={queryClient}>
+  return <GestureHandlerRootView style={{ flex: 1 }}><QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ThemeProvider value={appTheme}>
       <StatusBar style="light" />
@@ -33,5 +34,5 @@ export default function RootLayout() {
       </Stack>
       </ThemeProvider>
     </AuthProvider>
-  </QueryClientProvider>;
+  </QueryClientProvider></GestureHandlerRootView>;
 }

@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ActivityDetail } from '@/components/activity-detail';
+import { RunSummaryScreen } from '@/features/activities/run-summary-screen';
 export default function Summary() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return <ActivityDetail id={id ?? ''} finished />;
+  return <RunSummaryScreen id={id ?? ''} />;
 }

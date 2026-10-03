@@ -15,7 +15,7 @@ const paper = '#FFFFFF';
 
 export default function RunCountdown() {
   const { width } = useWindowDimensions();
-  const { type, autoPause } = useLocalSearchParams<{ type?: string; autoPause?: string }>();
+  const { type, autoPause, workout } = useLocalSearchParams<{ type?: string; autoPause?: string; workout?: string }>();
   const { session } = useAuth();
   const start = useRunStore((state) => state.start);
   const [count, setCount] = useState(3);
@@ -55,13 +55,13 @@ export default function RunCountdown() {
         router.replace('/(tabs)/run');
         return;
       }
-      const ready = await start(session.user.id, activityType, autoPause !== '0');
+      const ready = await start(session.user.id, activityType, autoPause !== '0', workout);
       if (ready && AppState.currentState && AppState.currentState !== 'active') {
         await useRunStore.getState().pause();
       }
       router.replace(ready ? '/run/active' : '/(tabs)/run');
     })();
-  }, [activityType, autoPause, count, pulse, session?.user.id, start]);
+  }, [activityType, autoPause, count, pulse, session?.user.id, start, workout]);
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
   const opacity = pulse.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 1, 1] });

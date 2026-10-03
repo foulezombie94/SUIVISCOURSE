@@ -119,6 +119,39 @@ export async function listActivities(userId: string, page = 0, size = 20): Promi
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
+export async function firstActivityDate(userId: string): Promise<Date | null> {
+  const local = await listLocalSummaries(userId);
+  const remote = await supabase.from('activities').select('started_at')
+    .eq('user_id', userId).order('started_at', { ascending: true }).limit(1).maybeSingle();
+  if (remote.error && !local.length) throw remote.error;
+  const dates = [...local.map((activity) => activity.startedAt),
+    ...(remote.data ? [remote.data.started_at] : [])];
+  return dates.length ? new Date(dates.sort()[0]) : null;
+}
+
+export async function listActivitiesInRange(userId: string, start: Date, end: Date): Promise<Activity[]> {
+  const local = (await listLocalSummaries(userId)).filter((activity) => {
+    const started = new Date(activity.startedAt);
+    return started >= start && started < end && activity.syncState === 'pending';
+  });
+  const remoteActivities: Activity[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await supabase.from('activities').select(summaryFields)
+      .eq('user_id', userId).gte('started_at', start.toISOString()).lt('started_at', end.toISOString())
+      .order('started_at', { ascending: false }).range(offset, offset + pageSize - 1);
+    if (result.error) {
+      if (offset === 0 && local.length) return local;
+      throw result.error;
+    }
+    remoteActivities.push(...(result.data as Remote[]).map(fromRemote));
+    if ((result.data?.length ?? 0) < pageSize) break;
+  }
+  const localIds = new Set(local.map((activity) => activity.id));
+  return [...local, ...remoteActivities.filter((activity) => !localIds.has(activity.id))]
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
 export async function getActivity(userId: string, id: string): Promise<Activity | null> {
   const local = await getLocalActivity(userId, id);
   if (local) return local;

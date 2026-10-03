@@ -1,3 +1,5 @@
+import type { GuidedWorkout } from '@/features/programmes/workout-types';
+
 export type ActivityType = 'running' | 'walking' | 'trail';
 export type Visibility = 'private' | 'friends';
 export type Point = {
@@ -14,6 +16,7 @@ export type Activity = {
   visibility: Visibility; title: string; hideRadiusMeters: 0 | 200 | 400 | 800;
   points: Point[]; splits: Split[]; syncState: 'pending' | 'synced';
   verificationStatus?: 'normal' | 'suspicious' | 'manual';
+  workout?: GuidedWorkout;
 };
 export type ActiveActivity = {
   id: string; userId: string; activityType: ActivityType;
@@ -25,6 +28,7 @@ export type ActiveActivity = {
   lastSplitMovingSeconds: number; discardNextLocation?: boolean;
   pausedDurationSeconds?: number; pausedAt?: number | null;
   smoothedAltitudeMeters?: number | null; elevationAnchorMeters?: number | null;
+  workout?: GuidedWorkout;
 };
 export type Profile = {
   id: string; username: string; display_name: string;

@@ -32,7 +32,9 @@
           "locationWhenInUsePermission": "Élan utilise ta position pendant une course pour calculer la distance et afficher ton parcours."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
     ]
   }
 }

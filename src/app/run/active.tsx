@@ -2,30 +2,49 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
+import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Alert, Modal, Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, { cancelAnimation, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteMap } from '@/components/route-map';
 import { getTrackPoints, useRunStore } from '@/store/run-store';
 import { formatDuration, formatKm, formatPace } from '@/utils/format';
 import { fonts } from '@/constants/typography';
+import { useRunnerProfile } from '@/features/onboarding/use-runner-profile';
+import { estimateActiveCalories } from '@/features/activities/calories';
+import { GuidedRunScreen } from '@/features/programmes/guided-run-screen';
 
 const ink = '#0C1116';
 const paper = '#FFFFFF';
 const accent = '#B9F532';
 const stopAccent = '#FF493D';
-const ringTrack = '#253038';
+type MetricIconName = 'pace' | 'duration' | 'calories';
 
-function Stat({ label, value, centered = false }: { label: string; value: string; centered?: boolean }) {
-  return <View style={{ gap: 3, alignItems: centered ? 'center' : 'flex-start' }}>
-    <Text style={{ color: '#BDBDBD', fontSize: 9, fontWeight: '800', letterSpacing: 0.7,
-      textAlign: centered ? 'center' : 'left' }}>{label}</Text>
-    <Text style={{ color: paper, fontSize: 13, fontFamily: fonts.monoBold,
-      fontWeight: '700', fontVariant: ['tabular-nums'],
-      textAlign: centered ? 'center' : 'left' }}>{value}</Text>
+function MetricIcon({ name }: { name: MetricIconName }) {
+  return <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+    {name === 'pace' ? <>
+      <Circle cx={15.5} cy={4} r={1.5} stroke={paper} strokeWidth={1.7} />
+      <Path d="m12 8 3 1 2 3m-5-4-2 4-3 2m5-2 3 3-1 5m-4-7-3 5-3 2m12-9 3 1 2-2"
+        stroke={paper} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
+    </> : name === 'duration' ? <>
+      <Circle cx={12} cy={13} r={8} stroke={paper} strokeWidth={1.7} />
+      <Path d="M12 13 15 9M9 2h6M12 2v3" stroke={paper} strokeWidth={1.7}
+        strokeLinecap="round" strokeLinejoin="round" />
+    </> : <Path d="M12 2c2 4 5 6 5 11 0 4-2.2 7-5 7s-5-3-5-7c0-2.6 1-4.5 2.5-6.5.2 2.1 1.1 3.3 2 4.1C11.8 7.6 12.2 5 12 2Z"
+      stroke={paper} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />}
+  </Svg>;
+}
+
+function Stat({ icon, label, value }: { icon: MetricIconName; label: string; value: string }) {
+  return <View style={{ flex: 1, minWidth: 0, alignItems: 'center', gap: 5 }}>
+    <MetricIcon name={icon} />
+    <Text numberOfLines={1} style={{ color: paper, fontSize: 15,
+      fontFamily: fonts.monoBold, fontWeight: '700', fontVariant: ['tabular-nums'],
+      textAlign: 'center' }}>{value}</Text>
+    <Text style={{ color: '#A8B2B9', fontSize: 10, fontWeight: '700', textAlign: 'center' }}>{label}</Text>
   </View>;
 }
 
@@ -45,16 +64,29 @@ function MusicCard({ onPress }: { onPress: () => void }) {
 }
 
 export default function ActiveRun() {
+  const mode = useRunStore((state) => state.active ? state.active.workout ? 'guided' : 'free' : null);
+  const [lastMode, setLastMode] = useState(mode);
+  if (mode && mode !== lastMode) setLastMode(mode);
+  return (mode ?? lastMode) === 'guided' ? <GuidedRunScreen /> : <FreeRun />;
+}
+
+function FreeRun() {
   const { width, height } = useWindowDimensions();
+  const runnerProfile = useRunnerProfile();
   const [mapRefresh, setMapRefresh] = useState(0);
   const [mapVisible, setMapVisible] = useState(false);
   const [musicVisible, setMusicVisible] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [temperatureCelsius, setTemperatureCelsius] = useState<number | null>(null);
   const finishingRef = useRef(false);
   const holdProgress = useSharedValue(0);
+  const distanceScale = useSharedValue(0.55);
   const { active, pause, resume, finish, busy, error } = useRunStore();
   const stopButtonScale = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + holdProgress.value * 0.55 }],
+  }));
+  const distanceAnimation = useAnimatedStyle(() => ({
+    transform: [{ scale: distanceScale.value }],
   }));
   const completeHold = useCallback(() => {
     if (finishingRef.current) return;
@@ -84,10 +116,47 @@ export default function ActiveRun() {
     holdProgress.set(withSpring(0, { damping: 14, stiffness: 180 }));
   };
   useEffect(() => {
+    distanceScale.set(withSpring(1, { damping: 15, stiffness: 170 }));
+  }, [distanceScale]);
+  useEffect(() => {
     if (!mapVisible) return;
     const timer = setInterval(() => setMapRefresh((value) => value + 1), 5000);
     return () => clearInterval(timer);
   }, [mapVisible]);
+  const runId = active?.id;
+  useEffect(() => {
+    if (!runId) return;
+    let alive = true;
+    async function refreshTemperature() {
+      try {
+        const points = getTrackPoints();
+        const latest = points[points.length - 1];
+        let coordinates = latest
+          ? { latitude: latest.latitude, longitude: latest.longitude }
+          : null;
+        if (!coordinates) {
+          const permission = await Location.getForegroundPermissionsAsync();
+          if (!permission.granted) return;
+          const known = await Location.getLastKnownPositionAsync({ maxAge: 15 * 60_000 });
+          if (known) coordinates = known.coords;
+        }
+        if (!coordinates) return;
+        const latitude = coordinates.latitude.toFixed(3);
+        const longitude = coordinates.longitude.toFixed(3);
+        const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + latitude
+          + '&longitude=' + longitude + '&current=temperature_2m&temperature_unit=celsius');
+        if (!response.ok) return;
+        const data = await response.json() as { current?: { temperature_2m?: number } };
+        const temperature = data.current?.temperature_2m;
+        if (alive && typeof temperature === 'number' && Number.isFinite(temperature)) {
+          setTemperatureCelsius(Math.round(temperature));
+        }
+      } catch { /* Keep the last known temperature when location or network is unavailable. */ }
+    }
+    void refreshTemperature();
+    const timer = setInterval(() => { void refreshTemperature(); }, 15 * 60_000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [runId]);
   const openMusicService = async (url: string) => {
     setMusicVisible(false);
     try { await Linking.openURL(url); }
@@ -99,15 +168,12 @@ export default function ActiveRun() {
     </View>
     : <Redirect href="/(tabs)/run" />;
 
-  const ringSize = Math.round(Math.min(width - 48, height * 0.38, 330));
-  const center = ringSize / 2;
-  const radius = center - 12;
-  const circumference = 2 * Math.PI * radius;
-  const lapProgress = Math.max(0.002, (active.distanceMeters % 1000) / 1000);
+  const distanceAreaSize = Math.round(Math.min(width - 48, height * 0.38, 330));
   const pace = active.distanceMeters >= 100
     ? active.movingSeconds / (active.distanceMeters / 1000) : null;
-  const speed = active.movingSeconds > 0
-    ? active.distanceMeters / active.movingSeconds * 3.6 : 0;
+  const storedWeight = runnerProfile.data?.weightKg;
+  const calories = estimateActiveCalories(active.activityType,
+    typeof storedWeight === 'number' ? storedWeight : null, active.distanceMeters);
   const trackPoints = getTrackPoints();
 
   return <SafeAreaView style={{ flex: 1, backgroundColor: ink, paddingHorizontal: 20,
@@ -132,10 +198,23 @@ export default function ActiveRun() {
     </View>
 
     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <View style={{ minHeight: 30, borderRadius: 16, backgroundColor: '#252E35',
-        paddingHorizontal: 12, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-        <MaterialCommunityIcons name="crosshairs-gps" size={14} color={accent} />
-        <Text style={{ color: paper, fontSize: 10, fontWeight: '800' }}>GPS</Text>
+      <View accessibilityLabel={temperatureCelsius == null
+        ? 'Météo, température indisponible'
+        : 'Météo, ' + temperatureCelsius + ' degrés Celsius'}
+        style={{ minHeight: 42, borderRadius: 22, backgroundColor: '#11191D',
+          borderWidth: 1, borderColor: '#344331', paddingLeft: 6, paddingRight: 13,
+          flexDirection: 'row', gap: 9, alignItems: 'center' }}>
+        <View style={{ width: 29, height: 29, borderRadius: 15, backgroundColor: accent,
+          alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="weather-partly-cloudy" size={17} color={ink} />
+        </View>
+        <View style={{ gap: 1 }}>
+          <Text style={{ color: accent, fontSize: 8, fontWeight: '900', letterSpacing: 1.1 }}>MÉTÉO</Text>
+          <Text style={{ color: paper, fontSize: 14, fontFamily: fonts.monoBold,
+            fontWeight: '800', fontVariant: ['tabular-nums'] }}>
+            {temperatureCelsius == null ? '— °C' : temperatureCelsius + ' °C'}
+          </Text>
+        </View>
       </View>
       <View style={{ minHeight: 30, borderRadius: 16, backgroundColor: '#252E35',
         paddingHorizontal: 12, justifyContent: 'center' }}>
@@ -146,31 +225,28 @@ export default function ActiveRun() {
     </View>
 
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-      <View style={{ width: ringSize, height: ringSize,
+      <View style={{ width: distanceAreaSize, height: distanceAreaSize,
         alignItems: 'center', justifyContent: 'center' }}>
-        <Svg width={ringSize} height={ringSize}
-          viewBox={'0 0 ' + ringSize + ' ' + ringSize} style={{ position: 'absolute' }}>
-          <Circle cx={center} cy={center} r={radius} fill="none" stroke={ringTrack} strokeWidth={2} />
-          <Circle cx={center} cy={center} r={radius - 20} fill="none" stroke={ringTrack} strokeWidth={1} />
-          <Circle cx={center} cy={center} r={radius - 40} fill="none" stroke={ringTrack} strokeWidth={1} />
-          <Circle cx={center} cy={center} r={radius} fill="none" stroke={accent}
-            strokeWidth={5} strokeLinecap="round"
-            strokeDasharray={circumference * lapProgress + ' ' + circumference}
-            rotation={-90} origin={center + ', ' + center} />
-        </Svg>
         <View style={{ alignItems: 'center', gap: 5 }}>
-          <MaterialCommunityIcons name="navigation-variant-outline" size={23} color={accent} />
-          <Text style={{ color: paper, fontSize: Math.min(ringSize * 0.18, 58),
-            fontFamily: fonts.monoBold, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
-            {formatKm(active.distanceMeters)}
-          </Text>
+          <Svg width={23} height={23} viewBox="0 0 24 24" fill="none">
+            <Path d="m12 3 7 17-7-4-7 4 7-17Z" stroke={accent} strokeWidth={1.8}
+              strokeLinejoin="round" />
+          </Svg>
+          <Animated.View style={[{ width: distanceAreaSize * 0.92, alignItems: 'center' }, distanceAnimation]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: paper,
+              fontSize: Math.min(distanceAreaSize * 0.26, 88), textAlign: 'center',
+              fontFamily: fonts.monoBold, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
+              {formatKm(active.distanceMeters)}
+            </Text>
+          </Animated.View>
           <Text style={{ color: '#A8B2B9', fontSize: 11, fontWeight: '700' }}>Distance (km)</Text>
         </View>
       </View>
-      <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-around' }}>
-        <Stat label="ALLURE / KM" value={formatPace(pace)} centered />
-        <Stat label="DURÉE" value={formatDuration(active.elapsedSeconds)} centered />
-        <Stat label="VITESSE" value={speed.toFixed(1) + ' km/h'} centered />
+      <View style={{ width: '100%', flexDirection: 'row', gap: 6,
+        transform: [{ translateY: -48 }] }}>
+        <Stat icon="pace" label="Allure / km" value={formatPace(pace) + '/km'} />
+        <Stat icon="duration" label="Durée" value={formatDuration(active.elapsedSeconds)} />
+        <Stat icon="calories" label="Kcal estimées" value={calories == null ? '— kcal' : calories + ' kcal'} />
       </View>
     </View>
 

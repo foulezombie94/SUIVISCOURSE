@@ -6,24 +6,24 @@ import { palette } from '@/constants/palette';
 import { fonts } from '@/constants/typography';
 
 const normalColor = Platform.OS === 'ios'
-  ? DynamicColorIOS({ dark: palette.text, light: palette.text }) : palette.text;
+  ? DynamicColorIOS({ dark: '#FFFFFF', light: '#000000' }) : palette.text;
 const activeColor = Platform.OS === 'ios'
-  ? DynamicColorIOS({ dark: palette.accent, light: palette.accent }) : palette.accent;
+  ? DynamicColorIOS({ dark: '#FFFFFF', light: '#000000' }) : palette.accent;
 
 export default function TabLayout() {
   const { session, ready } = useAuth();
   if (ready && !session) return <Redirect href="/(auth)/login" />;
   return <NativeTabs backgroundColor={palette.surface} tintColor={activeColor}
     iconColor={{ default: normalColor, selected: activeColor }}
-    labelStyle={{ default: { color: normalColor, fontFamily: fonts.regular, fontWeight: '400' },
-      selected: { color: activeColor, fontFamily: fonts.bold, fontWeight: '700' } }}>
+    labelStyle={{ default: { color: normalColor, fontFamily: fonts.bold, fontSize: 12, fontWeight: '700' },
+      selected: { color: activeColor, fontFamily: fonts.bold, fontSize: 12, fontWeight: '800' } }}>
     <NativeTabs.Trigger name="index">
       <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
       <NativeTabs.Trigger.Label>Accueil</NativeTabs.Trigger.Label>
     </NativeTabs.Trigger>
-    <NativeTabs.Trigger name="explore">
-      <NativeTabs.Trigger.Icon sf="safari" md="explore" />
-      <NativeTabs.Trigger.Label>Explorer</NativeTabs.Trigger.Label>
+    <NativeTabs.Trigger name="programme">
+      <NativeTabs.Trigger.Icon sf={{ default: 'list.clipboard', selected: 'list.clipboard.fill' }} md="assignment_turned_in" />
+      <NativeTabs.Trigger.Label>Programme</NativeTabs.Trigger.Label>
     </NativeTabs.Trigger>
     <NativeTabs.Trigger name="run">
       <NativeTabs.Trigger.Icon sf="figure.run" md="directions_run" />

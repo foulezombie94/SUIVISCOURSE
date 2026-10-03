@@ -7,6 +7,8 @@ import type { ActiveActivity, Activity, ActivityType, Point } from '@/types/doma
 import { averagePace, ingest, MAX_GPS_ACCURACY_METERS, tick } from '@/features/tracking/engine';
 import { clearActive, loadActive, saveActive, saveActivity } from '@/services/local-activities';
 import { syncPending } from '@/services/activities';
+import { advanceGuidedWorkout, confirmWarmup, createGuidedWorkout, findPlanSession, finishGuidedWorkout } from '@/features/programmes/workout-engine';
+import { completeProgrammeWorkout, loadProgramme } from '@/features/programmes/programme-state';
 
 let watch: Location.LocationSubscription | null = null;
 let ticker: ReturnType<typeof setInterval> | null = null;
@@ -44,13 +46,13 @@ async function beginWatch() {
     if (generation !== watchGeneration) return;
     const current = useRunStore.getState().active;
     if (!current) return;
-    const next = ingest(current, toPoint(position), trackBuffer);
+    const next = advanceGuidedWorkout(ingest(tick(current, Date.now()), toPoint(position), trackBuffer));
     if (next === current) return;
     useRunStore.setState({ active: next, routeVersion: trackBuffer.length });
     if (next.splits.length > current.splits.length) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-    if (Date.now() - lastSave >= 3000) {
+    if (next.workout?.index !== current.workout?.index || Date.now() - lastSave >= 3000) {
       lastSave = Date.now();
       void persist(next).catch(() => useRunStore.setState({
         error: 'Sauvegarde locale impossible. Vérifie l’espace disponible.',
@@ -65,9 +67,9 @@ async function beginWatch() {
   ticker = setInterval(() => {
     const current = useRunStore.getState().active;
     if (!current) return;
-    const next = tick(current, Date.now());
+    const next = advanceGuidedWorkout(tick(current, Date.now()));
     useRunStore.setState({ active: next });
-    if (Date.now() - lastSave >= 3000) {
+    if (next.workout?.index !== current.workout?.index || Date.now() - lastSave >= 3000) {
       lastSave = Date.now();
       void persist(next).catch(() => useRunStore.setState({
         error: 'Sauvegarde locale impossible. Vérifie l’espace disponible.',
@@ -79,7 +81,8 @@ async function beginWatch() {
 type RunState = {
   active: ActiveActivity | null; routeVersion: number; error: string | null; busy: boolean;
   restore: (userId: string) => Promise<boolean>;
-  start: (userId: string, type: ActivityType, autoPause: boolean) => Promise<boolean>;
+  start: (userId: string, type: ActivityType, autoPause: boolean, sessionId?: string) => Promise<boolean>;
+  advanceWorkout: () => Promise<void>;
   pause: () => Promise<void>; resume: () => Promise<void>;
   finish: () => Promise<Activity | null>; dismissError: () => void;
 };
@@ -92,16 +95,22 @@ export const useRunStore = create<RunState>((set, get) => ({
     const saved = await loadActive(userId);
     if (!saved) return false;
     const { points, ...summary } = saved;
+    stopWatch();
     trackBuffer = points ?? [];
     const now = Date.now();
-    set({ active: { ...summary, state: 'paused', lastTickAt: now, pausedAt: now },
+    set({ active: { ...summary, state: 'paused', lastTickAt: now, pausedAt: now,
+      pausedDurationSeconds: Math.max(summary.pausedDurationSeconds ?? 0,
+        (now - summary.startedAt) / 1000 - summary.elapsedSeconds) },
       routeVersion: trackBuffer.length });
     return true;
   },
-  start: async (userId, activityType, autoPause) => {
+  start: async (userId, activityType, autoPause, sessionId) => {
     set({ busy: true, error: null });
     try {
       if (get().active?.userId === userId || await get().restore(userId)) return true;
+      const requested = sessionId ? findPlanSession(sessionId) : null;
+      if (sessionId && !requested) throw new Error('La séance de ce programme est introuvable.');
+      const programme = requested ? await loadProgramme(userId) : null;
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) throw new Error('Autorise la localisation pour enregistrer ta course.');
       if (!await Location.hasServicesEnabledAsync()) throw new Error('Active la localisation sur ton téléphone.');
@@ -116,9 +125,11 @@ export const useRunStore = create<RunState>((set, get) => ({
         lastTickAt: now, lastObservationAt: position.timestamp,
         elapsedSeconds: 0, movingSeconds: 0, distanceMeters: 0,
         elevationGainMeters: 0, elevationLossMeters: 0,
-        splits: [], state: 'running', autoPause, stationarySeconds: 0,
+        splits: [], state: 'running', autoPause: requested ? false : autoPause, stationarySeconds: 0,
         recoverySeconds: 0, lastSplitMovingSeconds: 0, discardNextLocation: false,
         pausedDurationSeconds: 0, pausedAt: null,
+        workout: requested ? createGuidedWorkout(requested.plan, requested.session,
+          programme?.planId === requested.plan.id ? programme.startedOn : null) : undefined,
       };
       await persist(value);
       set({ active: value, routeVersion: trackBuffer.length });
@@ -126,6 +137,12 @@ export const useRunStore = create<RunState>((set, get) => ({
       return true;
     } catch (error) {
       stopWatch();
+      const interrupted = get().active;
+      if (interrupted?.userId === userId && interrupted.state !== 'paused') {
+        const paused = { ...tick(interrupted, Date.now()), state: 'paused' as const, pausedAt: Date.now() };
+        set({ active: paused });
+        await persist(paused).catch(() => undefined);
+      }
       set({ error: error instanceof Error ? error.message : 'Impossible de démarrer.' });
       return false;
     } finally {
@@ -133,22 +150,28 @@ export const useRunStore = create<RunState>((set, get) => ({
     }
   },
   pause: async () => {
+    if (get().busy) return;
     const active = get().active;
-    if (!active) return;
+    if (!active || active.state === 'paused') return;
+    set({ busy: true });
     stopWatch();
     const now = Date.now();
-    const next: ActiveActivity = { ...tick(active, now), state: 'paused', pausedAt: now };
+    const next: ActiveActivity = { ...advanceGuidedWorkout(tick(active, now)), state: 'paused', pausedAt: now };
     set({ active: next });
     try {
       await persist(next);
       set({ error: null });
     } catch {
       set({ error: 'Pause non sauvegardée. Réessaie.' });
+    } finally {
+      set({ busy: false });
     }
   },
   resume: async () => {
+    if (get().busy) return;
     const active = get().active;
-    if (!active) return;
+    if (!active || active.state !== 'paused') return;
+    set({ busy: true });
     try {
       const now = Date.now();
       const pauseDuration = active.pausedAt == null ? 0 : Math.max(0, (now - active.pausedAt) / 1000);
@@ -164,16 +187,32 @@ export const useRunStore = create<RunState>((set, get) => ({
     } catch {
       stopWatch();
       set({ active: { ...active, state: 'paused' }, error: 'Reprise GPS impossible. Réessaie.' });
+    } finally {
+      set({ busy: false });
     }
+  },
+  advanceWorkout: async () => {
+    const active = get().active;
+    if (!active || get().busy) return;
+    const next = confirmWarmup(tick(active, Date.now()));
+    if (next.workout === active.workout) return;
+    set({ active: next, busy: true });
+    try { await persist(next); set({ error: null }); }
+    catch { set({ error: 'Le passage à la séance n’a pas pu être sauvegardé.' }); }
+    finally { set({ busy: false }); }
   },
   finish: async () => {
     const active = get().active;
-    if (!active) return null;
+    if (!active || get().busy) return null;
     set({ busy: true, error: null });
     try {
       stopWatch();
+      const now = Date.now();
+      const last = advanceGuidedWorkout(tick(active, now));
+      const paused: ActiveActivity = { ...last, state: 'paused', pausedAt: active.pausedAt ?? now };
+      set({ active: paused });
+      await persist(paused);
       await persistence;
-      const last = tick(active, Date.now());
       const end = new Date();
       const activity: Activity = {
         id: last.id, userId: last.userId, activityType: last.activityType,
@@ -181,10 +220,14 @@ export const useRunStore = create<RunState>((set, get) => ({
         elapsedSeconds: last.elapsedSeconds, movingSeconds: last.movingSeconds,
         distanceMeters: last.distanceMeters, averagePaceSecPerKm: averagePace(last),
         elevationGainMeters: last.elevationGainMeters, elevationLossMeters: last.elevationLossMeters,
-        visibility: 'private', title: `Course du ${end.toLocaleDateString('fr-FR')}`,
+        visibility: 'private', title: last.workout
+          ? `${last.workout.planTitle} · S${last.workout.week} / séance ${last.workout.ordinal}`
+          : `Course du ${end.toLocaleDateString('fr-FR')}`,
         hideRadiusMeters: 400, points: trackBuffer.slice(), splits: last.splits, syncState: 'pending',
+        workout: finishGuidedWorkout(last),
       };
       await saveActivity(activity);
+      if (activity.workout) await completeProgrammeWorkout(last.userId, activity.workout);
       await clearActive(last.userId);
       trackBuffer = [];
       set({ active: null, routeVersion: 0 });
@@ -205,7 +248,7 @@ AppState.addEventListener('change', (state) => {
   if (!active || active.state === 'paused') return;
   stopWatch();
   const now = Date.now();
-  const paused: ActiveActivity = { ...tick(active, now), state: 'paused', pausedAt: now };
+  const paused: ActiveActivity = { ...advanceGuidedWorkout(tick(active, now)), state: 'paused', pausedAt: now };
   useRunStore.setState({ active: paused });
   void persist(paused).catch(() => useRunStore.setState({
     error: 'La pause n’a pas pu être sauvegardée. Vérifie l’espace disponible.',

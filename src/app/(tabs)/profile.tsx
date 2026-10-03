@@ -1,144 +1,176 @@
-import { useState, type ReactNode } from 'react';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/typography';
-import { ActivityTile } from '@/components/activity-tile';
-import { Button, Field, Page, Panel } from '@/components/ui';
-import { fonts } from '@/constants/typography';
 import { useAuth } from '@/features/auth/auth-provider';
-import { listActivities } from '@/services/activities';
+import { useRunnerProfile } from '@/features/onboarding/use-runner-profile';
 import { getMyProfile } from '@/services/friends';
-import { getRunScore, listBadges, listGoals } from '@/services/progression';
 import { supabase } from '@/services/supabase';
-import { useRunStore } from '@/store/run-store';
-import { formatDuration, formatKm } from '@/utils/format';
 
-const ink = '#000000';
-const paper = '#FFFFFF';
-function ProfileEyebrow({ children }: { children: ReactNode }) {
-  return <Text style={{ color: ink, fontSize: 12, fontWeight: '900', letterSpacing: 2.2 }}>{children}</Text>;
-}
-function ProfileTitle({ children }: { children: ReactNode }) {
-  return <Text style={{ color: ink, fontSize: 33, fontWeight: '900', letterSpacing: -1.2 }}>{children}</Text>;
-}
-function ProfilePanel({ children, style }: { children: ReactNode; style?: object }) {
-  return <Panel style={[{ backgroundColor: paper, borderColor: ink }, style]}>{children}</Panel>;
+const black = '#000000';
+const soft = '#F5F5F5';
+const green = '#B9F532';
+
+function MenuRow({ icon, label, onPress }: {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void;
+}) {
+  return <Pressable accessibilityRole="button" onPress={onPress}
+    style={({ pressed }) => ({ backgroundColor: soft, borderRadius: 17, height: 54,
+      paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 12,
+      opacity: pressed ? 0.65 : 1 })}>
+    <MaterialCommunityIcons name={icon} size={21} color={black} />
+    <Text style={{ flex: 1, color: black, fontSize: 15, fontWeight: '500' }}>{label}</Text>
+    <MaterialCommunityIcons name="chevron-right" size={22} color={black} />
+  </Pressable>;
 }
 
-const labels: Record<string,string> = {
-  fastest_1k: '1 KM LE PLUS RAPIDE', fastest_5k: '5 KM LE PLUS RAPIDE',
-  fastest_10k: '10 KM LE PLUS RAPIDE', longest_run: 'PLUS LONGUE COURSE',
-};
 export default function Profile() {
   const { session } = useAuth();
   const id = session?.user.id ?? '';
-  const active = useRunStore((state) => state.active);
   const cache = useQueryClient();
-  const [editing, setEditing] = useState(false);
+  const profile = useQuery({ queryKey: ['profile', id], queryFn: () => getMyProfile(id), enabled: !!id });
+  const runner = useRunnerProfile();
+  const [dialog, setDialog] = useState<'profile' | null>(null);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
-  const [message, setMessage] = useState('');
-  const profile = useQuery({ queryKey: ['profile', id], queryFn: () => getMyProfile(id), enabled: !!id });
-  const totals = useQuery({ queryKey: ['totals', id], queryFn: async () => {
-    const { data, error } = await supabase.rpc('my_running_totals');
-    if (error) throw error;
-    return data?.[0];
-  }, enabled: !!id });
-  const records = useQuery({ queryKey: ['records', id], queryFn: async () => {
-    const { data, error } = await supabase.from('personal_records')
-      .select('record_type,value,achieved_at').eq('user_id', id);
-    if (error) throw error;
-    return data ?? [];
-  }, enabled: !!id });
-  const history = useInfiniteQuery({
-    queryKey: ['history', id], enabled: !!id, initialPageParam: 0,
-    queryFn: ({ pageParam }) => listActivities(id, pageParam, 20),
-    getNextPageParam: (last, all) => last.length >= 20 ? all.length : undefined,
-  });
-  const runs = history.data?.pages.flat() ?? [];
-  const badges = useQuery({ queryKey: ['badges', id], queryFn: () => listBadges(id),
-    enabled: !!id });
-  const goals = useQuery({ queryKey: ['goals', id], queryFn: () => listGoals(id),
-    enabled: !!id });
-  const latestScore = useQuery({ queryKey: ['score', runs[0]?.id],
-    queryFn: () => getRunScore(runs[0].id), enabled: !!runs[0] });
-  async function saveProfile() {
-    const value = name.trim();
-    if (!value) { setMessage('Le nom ne peut pas être vide.'); return; }
-    const { error } = await supabase.from('profiles')
-      .update({ display_name: value, bio: bio.trim() || null, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) { setMessage('Profil non enregistré. Réessaie.'); return; }
-    setEditing(false); setMessage('Profil enregistré.');
-    void cache.invalidateQueries({ queryKey: ['profile', id] });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const displayName = profile.data?.display_name || 'Ton profil';
+  const currentWeight = runner.data?.weightKg;
+  const weightLabel = currentWeight == null ? '—' : `${currentWeight.toLocaleString('fr-FR')} kg`;
+  const courseProfile = runner.data;
+  const completedFields = [courseProfile?.age, currentWeight, courseProfile?.heightCm,
+    courseProfile?.runningLevel, courseProfile?.runsPerWeek].filter((value) => value != null).length;
+  const levelLabel = courseProfile?.runningLevel === 'regular' ? 'Régulier'
+    : courseProfile?.runningLevel === 'occasional' ? 'Occasionnel'
+      : courseProfile?.runningLevel === 'beginner' ? 'Débutant' : '—';
+  const frequencyLabel = courseProfile?.runsPerWeek === 1 ? '1 à 2 sorties / semaine'
+    : courseProfile?.runsPerWeek === 3 ? '3 à 4 sorties / semaine'
+      : courseProfile?.runsPerWeek === 5 ? '5 sorties ou plus / semaine' : 'Fréquence à renseigner';
+  function openDialog(kind: 'profile') {
+    setName(profile.data?.display_name ?? '');
+    setBio(profile.data?.bio ?? '');
+    setError(''); setDialog(kind);
   }
-  return <Page backgroundColor={paper}><StatusBar style="dark" /><ProfileEyebrow>TA PROGRESSION</ProfileEyebrow>
-    <ProfileTitle>{profile.data?.display_name ?? 'Profil'}</ProfileTitle>
-    <Text style={{ color: ink, fontSize: 17 }}>@{profile.data?.username ?? '…'}</Text>
-    <ProfilePanel>
-      {editing ? <>
-        <Field placeholderTextColor={ink} style={{ backgroundColor: paper, color: ink, borderColor: ink }} accessibilityLabel="Nom" placeholder="Nom affiché" value={name} onChangeText={setName} />
-        <Field placeholderTextColor={ink} style={{ backgroundColor: paper, color: ink, borderColor: ink }} accessibilityLabel="Bio" placeholder="Bio courte" value={bio} onChangeText={setBio} maxLength={180} />
-        <Button inverted label="ENREGISTRER" onPress={saveProfile} />
-        <Button inverted label="ANNULER" tone="muted" onPress={() => setEditing(false)} />
-      </> : <>
-        <Text style={{ color: ink }}>{profile.data?.bio || 'Ajoute une courte bio pour tes amis.'}</Text>
-        <Button inverted label="MODIFIER LE PROFIL" tone="muted" onPress={() => {
-          setName(profile.data?.display_name ?? '');
-          setBio(profile.data?.bio ?? ''); setEditing(true); setMessage('');
-        }} />
-      </>}
-      {message ? <Text style={{ color: ink }}>{message}</Text> : null}
-    </ProfilePanel>
-    <ProfileEyebrow>EN CHIFFRES</ProfileEyebrow>
-    <View style={{ flexDirection: 'row', gap: 10 }}>
-      <ProfilePanel style={{ flex: 1 }}><Text style={{ color: ink }}>DISTANCE</Text>
-        <Text style={{ color: ink, fontSize: 26, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatKm(totals.data?.total_distance_meters ?? 0)} KM</Text></ProfilePanel>
-      <ProfilePanel style={{ flex: 1 }}><Text style={{ color: ink }}>SORTIES</Text>
-        <Text style={{ color: ink, fontSize: 26, fontFamily: fonts.monoBold, fontWeight: '700' }}>{totals.data?.run_count ?? 0}</Text></ProfilePanel>
-    </View>
-    <ProfilePanel><Text style={{ color: ink }}>TEMPS TOTAL</Text>
-      <Text style={{ color: ink, fontSize: 25, fontFamily: fonts.monoBold, fontWeight: '700' }}>{formatDuration(totals.data?.total_elapsed_seconds ?? 0)}</Text></ProfilePanel>
-    <ProfileEyebrow>PROGRESSION</ProfileEyebrow>
-    <ProfilePanel><Text style={{ color: ink }}>DERNIER RUN SCORE</Text>
-      <Text style={{ color: ink, fontSize: 44, fontFamily: fonts.monoBold, fontWeight: '700' }}>{latestScore.data?.score ?? '—'}</Text>
-      <Text style={{ color: ink }}>Calculé par rapport à tes sorties précédentes.</Text></ProfilePanel>
-    <ProfileEyebrow>OBJECTIFS</ProfileEyebrow>
-    {(goals.data ?? []).map((goal) => <ProfilePanel key={goal.goal_id}>
-      <Text style={{ color: ink, fontWeight: '800' }}>
-        {goal.kind === 'distance' ? 'DISTANCE' : goal.kind === 'runs' ? 'COURSES'
-          : goal.kind === 'best_5k' ? '5 KM CHRONO' : '10 KM CHRONO'} · {goal.period === 'week' ? 'SEMAINE'
-          : goal.period === 'month' ? 'MOIS' : 'RECORD PERSONNEL'}
-      </Text>
-      <Text style={{ color: ink, fontSize: 22, fontWeight: '900' }}>
-        {goal.kind === 'distance' ? `${formatKm(goal.progress)} / ${formatKm(goal.target_value)} KM`
-          : goal.kind === 'runs' ? `${goal.progress} / ${goal.target_value} SORTIES`
-          : `${goal.progress ? formatDuration(goal.progress) : '—'} / ${formatDuration(goal.target_value)}`}</Text>
-    </ProfilePanel>)}
-    <Button inverted label="GÉRER MES OBJECTIFS" tone="muted" onPress={() => router.push('/goals')} />
-    <ProfileEyebrow>BADGES</ProfileEyebrow>
-    {badges.isError ? <Text style={{ color: ink }}>Badges indisponibles. Réessaie plus tard.</Text> : null}
-    {badges.data?.length ? <ProfilePanel>{badges.data.map((badge) => <View key={badge.code}>
-      <Text style={{ color: ink, fontWeight: '900' }}>✦ {badge.achievements?.title ?? badge.code}</Text>
-      <Text style={{ color: ink }}>{badge.achievements?.description}</Text>
-    </View>)}</ProfilePanel> : !badges.isError ? <Text style={{ color: ink }}>Ton premier badge arrive avec ta première course.</Text> : null}
-    <ProfileEyebrow>RECORDS PERSONNELS</ProfileEyebrow>
-    {records.data?.length ? <ProfilePanel>{records.data.map((record) => <View key={record.record_type}
-      style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Text style={{ color: ink, flex: 1 }}>{labels[record.record_type] ?? record.record_type}</Text>
-      <Text style={{ color: ink, fontWeight: '800' }}>{record.record_type === 'longest_run'
-        ? `${formatKm(record.value)} KM` : formatDuration(record.value)}</Text>
-    </View>)}</ProfilePanel> : <Text style={{ color: ink }}>Tes records apparaîtront après tes premières courses.</Text>}
-    <ProfileEyebrow>HISTORIQUE</ProfileEyebrow>
-    {runs.map((activity) => <ActivityTile key={activity.id} activity={activity} inverted />)}
-    {history.hasNextPage ? <Button inverted label="VOIR PLUS" tone="muted" disabled={history.isFetchingNextPage}
-      onPress={() => history.fetchNextPage()} /> : null}
-    {!runs.length ? <Text style={{ color: ink }}>Aucune activité pour le moment.</Text> : null}
-    <Button inverted label="SE DÉCONNECTER" tone="muted" onPress={() => {
-      if (active) { Alert.alert('Course en cours', 'Termine la course avant de te déconnecter.'); return; }
-      void supabase.auth.signOut().then(() => router.replace('/(auth)/login'));
-    }} />
-  </Page>;
+  async function save() {
+    if (!id || saving) return;
+    if (!name.trim()) { setError('Entre ton nom.'); return; }
+    setSaving(true); setError('');
+    try {
+      const { error: saveError } = await supabase.from('profiles').update({ display_name: name.trim(),
+        bio: bio.trim() || null, updated_at: new Date().toISOString() }).eq('id', id);
+      if (saveError) throw saveError;
+      await cache.invalidateQueries({ queryKey: ['profile', id] });
+      setDialog(null);
+    } catch { setError('Enregistrement impossible. Réessaie.'); }
+    finally { setSaving(false); }
+  }
+
+  return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top']}>
+    <StatusBar style="dark" />
+    <ScrollView showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 15, paddingBottom: 110 }}>
+      <View style={{ alignItems: 'center', paddingTop: 2, marginBottom: 24 }}>
+        <View style={{ position: 'absolute', left: 0, top: 2 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Paramètres et statistiques"
+            onPress={() => router.push('/profile/details')}
+            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: soft,
+              alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="cog-outline" size={22} color={black} />
+          </Pressable>
+        </View>
+        <View style={{ position: 'absolute', right: 0, top: 2 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Notifications"
+            onPress={() => router.push('/social/notifications')}
+            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: soft,
+              alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="bell-outline" size={21} color={black} />
+          </Pressable>
+        </View>
+        <View style={{ width: 112, height: 112, borderRadius: 56, overflow: 'hidden',
+          backgroundColor: '#ECEEE8', alignItems: 'center', justifyContent: 'center' }}>
+          {profile.data?.avatar_url && !avatarFailed
+            ? <Image source={{ uri: profile.data.avatar_url }} onError={() => setAvatarFailed(true)}
+              accessibilityLabel={`Photo de ${displayName}`} style={{ width: '100%', height: '100%' }} />
+            : <Text style={{ color: black, fontSize: 38, fontWeight: '700' }}>
+              {profile.data?.display_name?.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'É'}</Text>}
+        </View>
+        <Text style={{ color: black, fontSize: 25, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>{displayName}</Text>
+      </View>
+
+      <View style={{ backgroundColor: '#202421', borderRadius: 19, padding: 19, gap: 17 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>PROFIL DE COURSE</Text>
+          <MaterialCommunityIcons name="run-fast" size={21} color="#FFFFFF" />
+        </View>
+        <View accessibilityRole="progressbar" accessibilityLabel="Informations de course renseignées"
+          accessibilityValue={{ min: 0, max: 5, now: completedFields }}
+          style={{ height: 11, borderRadius: 6, backgroundColor: '#464B44', overflow: 'hidden' }}>
+          <View style={{ height: 11, backgroundColor: green, borderRadius: 6, width: `${completedFields / 5 * 100}%` }} />
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {[
+            { label: 'Âge', value: courseProfile?.age == null ? '—' : `${courseProfile.age} ans`, align: 'left' },
+            { label: 'Poids', value: weightLabel, align: 'center' },
+            { label: 'Taille', value: courseProfile?.heightCm == null ? '—' : `${courseProfile.heightCm} cm`, align: 'right' },
+          ].map((item) => <View key={item.label} style={{ flex: 1, gap: 4 }}>
+            <Text style={{ color: '#B9BDB9', fontSize: 11, textAlign: item.align as 'left' | 'center' | 'right' }}>{item.label}</Text>
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 18,
+              textAlign: item.align as 'left' | 'center' | 'right' }}>{item.value}</Text>
+          </View>)}
+        </View>
+        <View style={{ borderTopWidth: 1, borderTopColor: '#464B44', paddingTop: 13,
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{levelLabel}</Text>
+          <Text style={{ color: '#B9BDB9', fontSize: 11, flex: 1, textAlign: 'right' }}>{frequencyLabel}</Text>
+        </View>
+      </View>
+      {runner.isError ? <Text style={{ color: black, marginTop: 9, fontSize: 12 }}>Ton profil de course est indisponible pour le moment.</Text> : null}
+      <Pressable accessibilityRole="button" onPress={() => router.push('/(auth)/onboarding')}
+        style={({ pressed }) => ({ backgroundColor: '#202421', height: 49, borderRadius: 25,
+          marginTop: 15, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.75 : 1 })}>
+        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Modifier mes infos de course</Text>
+      </Pressable>
+      <View style={{ gap: 14, marginTop: 27 }}>
+        <MenuRow icon="account-edit-outline" label="Modifier le profil" onPress={() => openDialog('profile')} />
+        <MenuRow icon="bookmark-outline" label="Séances enregistrées" onPress={() => router.push({
+          pathname: '/profile/history', params: { favorites: 'yes' },
+        })} />
+        <MenuRow icon="history" label="Historique" onPress={() => router.push('/profile/history')} />
+      </View>
+
+      {profile.isError ? <Text style={{ color: black, fontSize: 13, marginTop: 15 }}>Le profil n’a pas pu être chargé.</Text> : null}
+    </ScrollView>
+    <Modal visible={dialog != null} transparent animationType="fade" onRequestClose={() => { if (!saving) setDialog(null); }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, gap: 17 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: black, fontSize: 21, fontWeight: '700' }}>Modifier le profil</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Fermer" disabled={saving}
+              onPress={() => setDialog(null)} hitSlop={10}><MaterialCommunityIcons name="close" size={23} color={black} /></Pressable>
+          </View>
+          <>
+            <TextInput accessibilityLabel="Nom affiché" placeholder="Nom affiché" placeholderTextColor="#666666"
+              value={name} onChangeText={setName} maxLength={80}
+              style={{ backgroundColor: soft, borderRadius: 14, padding: 16, color: black, fontSize: 16 }} />
+            <TextInput accessibilityLabel="Bio" placeholder="Bio" placeholderTextColor="#666666" value={bio}
+              onChangeText={setBio} maxLength={180} multiline
+              style={{ backgroundColor: soft, borderRadius: 14, padding: 16, color: black, fontSize: 16 }} />
+          </>
+          {error ? <Text style={{ color: '#BD192C', fontSize: 13 }}>{error}</Text> : null}
+          <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()}
+            style={{ backgroundColor: black, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}>
+            {saving ? <ActivityIndicator color="#FFFFFF" />
+              : <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Enregistrer</Text>}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  </SafeAreaView>;
 }
